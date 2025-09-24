@@ -1,0 +1,26 @@
+{
+  "name": "stitched-image",
+  "version": "1.0.0-beta-1",
+  "description": "Creates a single image from a collection of images. Supports zoomable image formats.",
+  "keywords": [
+    "dzi",
+    "iiif",
+    "stitch",
+    "gallery",
+    "openseadragon"
+  ],
+  "license": "ISC",
+  "author": "Gwen",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "fs": "^0.0.1-security"
+  }
+}
