@@ -1,6 +1,5 @@
 import fs from 'fs';
-import type { LayoutObject, ArtId, LayoutId } from '../gallery-image.js';
-import { getLayoutById } from '../db-connect.js';
+import type { LayoutObject, ArtId, LayoutId, ImageId } from '../types.js';
 import type { GenerateImageOptions } from '../image/LayoutImage.js';
 
 const dzi = (layout) => {
@@ -21,7 +20,7 @@ const dziFromStitch = (layout) => {
 
 
 type LayoutExistsOptions = {
-    layoutId: string
+    layoutId: string;
 }
 export type LayoutOptions = {
     name: string;
@@ -88,51 +87,25 @@ export class Layout {
      */
     noteImageSize: number;
 
-        /**
-     * Convenience method to quickly load a layout from datatabase ID. Requires external 'getLayoutById'
-     * @param options 
-     * @returns 
-     */
-    static async fromDb(options: LayoutExistsOptions): Promise<Layout> {
-        if (!options?.layoutId) throw new Error('No layout ID provided.');
+    constructor(options?: LayoutOptions | LayoutObject) {
+        // LayoutObject passed directly
+        if ((options as LayoutObject)._id) {
+            const layoutObj = options as LayoutObject;
 
-        const layout = new Layout();
-        await layout.loadFromDb(options.layoutId);
-
-        return layout;
-    }
-    /**
-     * Initialize a new layout from command options
-     * @param options 
-     * @returns 
-     */
-    static async fromOptions(options: LayoutOptions): Promise<Layout> {
-        const layout = new Layout();
-        await layout.createFromOptions(options);
-
-        return layout;
-    }
-
-    constructor(options?: LayoutOptions | LayoutExistsOptions) {
-        if ((options as LayoutExistsOptions)?.layoutId) this._id = (options as LayoutExistsOptions).layoutId
-
+            this._id = layoutObj._id;
+            this.name = layoutObj.name;
+            this.array = layoutObj.array;
+            this.image = layoutObj.image;
+            this.numCols = layoutObj.numCols;
+            this.numRows = layoutObj.numRows;
+            this.noteImageSize = layoutObj.noteImageSize;
+        }
+        // LayoutOptions passed
+        else {
+            options = options as LayoutOptions;
+            this.createFromOptions(options);
+        }
     }    
-
-    async loadFromDb(layoutId: LayoutId): Promise<Layout> {
-
-        const layoutObj = await getLayoutById(layoutId);
-        if (!layoutObj) throw new Error('No existing layout found in DB.');
-
-        this._id = layoutId;
-        this.name = layoutObj.name;
-        this.array = layoutObj.array;
-        this.image = layoutObj.image;
-        this.numCols = layoutObj.numCols;
-        this.numRows = layoutObj.numRows;
-        this.noteImageSize = layoutObj.noteImageSize;
-
-        return this;
-    }
 
     async createFromOptions(options: LayoutOptions): Promise<void> {
         
@@ -162,7 +135,7 @@ export class Layout {
                 this.numCols = options.numCols;
             }
             
-            this.array = await this._makeRandomPattern({
+            this.array = this._makeRandomPattern({
                 artIds: options.artIds,
                 ratio: options.ratio ? options.ratio : 9/16
             });
@@ -179,7 +152,7 @@ export class Layout {
      * @param options 
      * @returns 
      */
-    async _makeRandomPattern(options: {artIds: ArtId[], ratio: number}) {
+    _makeRandomPattern(options: {artIds: ArtId[], ratio: number}): ArtId[][] {
         if (this._id) throw new Error('Layout was initialized with an ID. Cannot make random pattern.')
         console.log('Creating random pattern...')
     
@@ -274,28 +247,14 @@ export class Layout {
             console.log(`[DONE] Layout image generated. ${options.filePath ? `Files saved to ${LAYOUT_DIR}.` : ''}`)
         })
 
-        // Insert layout object to mongo atlas
-        if (options.insert) {
-            // Upload image files to S3
-            console.log('[BEGIN S3 UPLOAD]');
-            const imageUrl = await imageObj.uploadToS3();
-            console.log(`Successfully uploaded DZI to ${imageUrl}`);
-            // Insert image object into DB and retrieve ObjectId
-            const imageId = await imageObj.insert();
-
-            // 6. update layout object with dzi metadata and S3 URL
-            this.image = imageId;
-
-            const resId = await this.insert();
-            console.log(`Successfully inserted layout to Atlas with ID ${resId}.`)
-        }
-
         // Save layout JSON to disk
         if (options.filePath) {
             const jsonName = `${LAYOUT_DIR}/${this.name}-layout.json`;
             fs.writeFileSync(jsonName, JSON.stringify(this.toJson()));
             console.log(`Saved ${jsonName}`);
-        }    
+
+            // TODO save layout image to disk
+        } 
     }
 
     async insert() {

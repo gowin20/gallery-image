@@ -21,6 +21,8 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "fs": "^0.0.1-security"
+    "fs": "^0.0.1-security",
+    "node-fetch": "^3.3.2",
+    "sharp": "^0.34.4"
   }
 }

@@ -1,6 +1,6 @@
 import { Layout, type LayoutOptions } from "./Layout.js";
+import type { ArtistId } from "../types.js";
 
-type ArtistId = string;
 type ArtistLayoutOptions = LayoutOptions & {
     userId: ArtistId;
 }
