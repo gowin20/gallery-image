@@ -8,6 +8,8 @@
         "data"
     ],
     "compilerOptions": {
+        "declaration": true,
+        "declarationDir": "./dist/declarations",
         "module":"nodenext",
         "target":"esnext",
         "esModuleInterop": true,
