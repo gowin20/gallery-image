@@ -1,5 +1,5 @@
-import { Layout, type LayoutOptions, type LayoutId } from "./Layout.js";
-
+import { Layout, type LayoutOptions } from "./Layout.js";
+import type { LayoutId } from "../gallery-image.js";
 
 type UserId = string;
 type UserLayoutOptions = LayoutOptions & {

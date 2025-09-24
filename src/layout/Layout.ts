@@ -1,6 +1,6 @@
-import { type ArtId } from '../Art.js';
-import { getLayoutById, type LayoutDbInfo } from '../db-connect.js';
 import fs from 'fs';
+import type { LayoutObject, ArtId, LayoutId } from '../gallery-image.js';
+import { getLayoutById } from '../db-connect.js';
 
 const dzi = (layout) => {
     console.log('DZI')
@@ -17,7 +17,7 @@ const dziFromStitch = (layout) => {
 
 // note becomes generic "art" class
 // layout is a layout of art
-export type LayoutId = string;
+
 
 type LayoutExistsOptions = {
     layoutId: string
@@ -240,7 +240,7 @@ export class Layout {
         return pattern;
     }
 
-    toJson(): LayoutDbInfo {
+    toJson(): LayoutObject {
         return {
             _id:this._id,
             name: this.name,
@@ -252,12 +252,7 @@ export class Layout {
         };
     }
 
-    async insert() {
-        throw new Error('Method \'insert()\' must be implemented.');
-    }
-
-
-    async generateImage(options: GenerateImageOptions) {
+    async generateImage(options: GenerateImageOptions): Promise<void> {
         console.log('Generating layout image...');
 
         const LAYOUT_DIR = TEMP_LAYOUT_DIR+this.name;
@@ -313,6 +308,10 @@ export class Layout {
             fs.writeFileSync(jsonName, JSON.stringify(this.toJson()));
             console.log(`Saved ${jsonName}`);
         }    
+    }
+
+    async insert() {
+        throw new Error('Method \'insert()\' must be implemented.');
     }
 
     async patchImage() {

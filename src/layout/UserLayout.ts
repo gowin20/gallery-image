@@ -1,4 +1,4 @@
-import { Layout, type LayoutOptions, type LayoutId } from "./Layout.js";
+import { Layout, type LayoutOptions } from "./Layout.js";
 
 type ArtistId = string;
 type ArtistLayoutOptions = LayoutOptions & {
