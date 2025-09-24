@@ -1,10 +1,7 @@
-import type { ImageObject, Layout } from "../gallery-image.js";
+import type { ImageObject } from '../types.js';
+import type { Layout } from '../layout/Layout.js';
 
 export type GenerateImageOptions = {
-    /**
-     * Whether to insert the image into a database
-     */
-    insert: boolean;
     /**
      * The path of a file string
      */
