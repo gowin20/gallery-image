@@ -1,6 +1,7 @@
 import fs from 'fs';
 import type { LayoutObject, ArtId, LayoutId } from '../gallery-image.js';
 import { getLayoutById } from '../db-connect.js';
+import type { GenerateImageOptions } from '../image/LayoutImage.js';
 
 const dzi = (layout) => {
     console.log('DZI')
@@ -37,20 +38,7 @@ export type LayoutOptions = {
     noteImageSize?: number;
 }
 
-type GenerateImageOptions = {
-    /**
-     * Whether to insert the image into a database
-     */
-    insert: boolean;
-    /**
-     * The path of a file string
-     */
-    filePath: string;
-    /**
-     * 
-     */
-    outputType: string;
-}
+
 
 
 /*

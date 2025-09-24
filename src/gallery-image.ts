@@ -38,6 +38,28 @@ export interface LayoutObject {
     noteImageSize: number;
 }
 
+export interface ImageObject {
+    _id: string;
+    type?: "stitch" | "dzi";
+    Image: DziImage | StitchedImage;
+}
+
+type DziImage = {
+    Url: string;
+    xmlns: string;
+    Format: "jpeg";
+    Overlap: number;
+    TileSize: number;
+    Size: {
+        Width: number;
+        Height: number;
+    }
+}
+
+type StitchedImage = {
+    Path: string;
+}
+
 export {
     Layout,
     version as VERSION
