@@ -123,8 +123,6 @@ export class Art {
         };
         if (!this.orig) throw new Error('Must have a full-resolution original image to build thumbnails.');
 
-        console.log(`Creating thumbnail for ${this.origName}`);
-
         const thisThumbnail = thumbnailName(thumbnailSize);
 
         let origBuffer: Buffer;
@@ -135,14 +133,15 @@ export class Art {
         const thumbnailBuffer = await sharp(origBuffer).resize({width:thumbnailSize}).jpeg().toBuffer();
         this.thumbnails[thisThumbnail] = thumbnailBuffer;
         
+
+        console.log(`Created thumbnail for ${this.origName}.`);
         // save image
         if (options?.saveFile) {
             if (!options.outputDir) throw new Error('Must provide a directory path with `outputDir` to save file.');
 
             writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.origName}-${thisThumbnail}.jpeg`, thumbnailBuffer);
             console.log(`Saved thumbnail ${thisThumbnail} to ${options.outputDir}.`);
-        }
-
+        }        
         return thumbnailBuffer;
     }
 

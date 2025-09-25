@@ -1,8 +1,7 @@
 import fs from 'fs';
-import type { LayoutObject, ArtId, LayoutId, ImageId, GenerateImageOptions } from '../types.js';
-import { StitchedImage } from '../image/StitchedImage.js';
-import { LayoutImage } from '../image/LayoutImage.js';
-import { cleanTrailingSlash } from '../Util.js';
+import type { LayoutObject, ArtId, LayoutId, ImageId, GenerateImageOptions } from './types.js';
+import { LayoutImage } from './LayoutImage.js';
+import { cleanTrailingSlash } from './Util.js';
 
 const dzi = (layout) => {
     console.log('DZI')
@@ -226,7 +225,7 @@ export class Layout {
         if (!options || !options.outputType) throw new Error('Must specify an output file type.');
         console.log('Generating layout image...');
 
-        this.image = new StitchedImage(this);
+        this.image = new LayoutImage(this);
 
         // Generate image using subclass, potentially save files to disk
         await this.image.generate(options);

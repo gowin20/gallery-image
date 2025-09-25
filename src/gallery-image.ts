@@ -1,4 +1,4 @@
-import { Layout } from "./layout/Layout.js";
+import { Layout } from "./Layout.js";
 import { Art } from "./Art.js";
 
 import packageInfo from '../package.json' with {type:'json'};
