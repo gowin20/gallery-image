@@ -6,7 +6,6 @@ const urlRegex = /^(http|https):\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:\d+)?(\/\S*)
 
 export const getResourceBuffer = async (filePathOrUrl: string | URL): Promise<Buffer> => {
 
-    console.log('PATH:',filePathOrUrl)
     let imageBuffer: Buffer;
     // If URL
     if (filePathOrUrl instanceof URL || urlRegex.test(filePathOrUrl)) {

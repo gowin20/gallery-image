@@ -32,10 +32,6 @@ interface ArtOptions extends ArtObject {
     image?: ImageId;
 }
 
-interface GenerateOptions extends GenerateImageOptions {
-    dirPath?: string;
-}
-
 const thumbnailName = (number: number) => `s-${number}px`;
 
 export class Art {
@@ -120,7 +116,7 @@ export class Art {
            return loadedThumbnail;
         }
     }
-    async generateThumbnail(thumbnailSize: number, options?: GenerateOptions): Promise<Buffer> {
+    async generateThumbnail(thumbnailSize: number, options?: GenerateImageOptions): Promise<Buffer> {
         if (this.thumbnailExists(thumbnailSize)) {
             throw new Error(`Thumbnail of size ${thumbnailSize} already exists for ${this.origName}.`)
             return;
@@ -141,10 +137,10 @@ export class Art {
         
         // save image
         if (options?.saveFile) {
-            if (!options.dirPath) throw new Error('Must provide a directory path with `dirPath` to save file.');
+            if (!options.outputDir) throw new Error('Must provide a directory path with `outputDir` to save file.');
 
-            writeFileSync(`${cleanTrailingSlash(options.dirPath)}/${this.origName}-${thisThumbnail}.jpeg`, thumbnailBuffer);
-            console.log(`Saved thumbnail ${thisThumbnail} to ${options.dirPath}.`);
+            writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.origName}-${thisThumbnail}.jpeg`, thumbnailBuffer);
+            console.log(`Saved thumbnail ${thisThumbnail} to ${options.outputDir}.`);
         }
 
         return thumbnailBuffer;
@@ -153,7 +149,7 @@ export class Art {
     pyramidExists(): boolean {
         return this.image !== undefined;
     }
-    async generatePyramid(options: GenerateOptions): Promise<Buffer> {
+    async generatePyramid(options: GenerateImageOptions): Promise<Buffer> {
         if (this.image) throw new Error('Image pyramid already exists.');
 
         const origBuffer = await getResourceBuffer(this.orig as string | URL);
@@ -175,7 +171,7 @@ export class Art {
 
         if (options?.saveFile) {
 
-            writeFileSync(`${cleanTrailingSlash(options.dirPath)}/${this.origName}-tiled.tiff`, pyramidBuffer);
+            writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.origName}-tiled.tiff`, pyramidBuffer);
             console.log('Wrote pyramid TIFF to temp directory.');
         }
 

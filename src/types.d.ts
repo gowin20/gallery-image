@@ -104,7 +104,11 @@ export type GenerateImageOptions = {
      */
     saveFile: boolean;
     /**
+     * Output directory
+     */
+    outputDir?: string;
+    /**
      * 
      */
-    outputType: string;
+    outputType?: string;
 }

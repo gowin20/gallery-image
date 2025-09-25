@@ -11,10 +11,6 @@ export interface LayoutImage {
      */
     layout: Layout;
     /**
-     * Name used for associated image thumbnails
-     */
-    thumbnailName: string;
-    /**
      * 
      * @param options 
      * @returns 

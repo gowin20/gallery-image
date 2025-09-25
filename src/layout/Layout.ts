@@ -1,5 +1,8 @@
 import fs from 'fs';
 import type { LayoutObject, ArtId, LayoutId, ImageId, GenerateImageOptions } from '../types.js';
+import { StitchedImage } from '../image/StitchedImage.js';
+import { LayoutImage } from '../image/LayoutImage.js';
+import { cleanTrailingSlash } from '../Util.js';
 
 const dzi = (layout) => {
     console.log('DZI')
@@ -17,10 +20,6 @@ const dziFromStitch = (layout) => {
 // note becomes generic "art" class
 // layout is a layout of art
 
-
-type LayoutExistsOptions = {
-    layoutId: string;
-}
 export type LayoutOptions = {
     name: string;
     // Options for a preset arrangement of notes
@@ -36,7 +35,12 @@ export type LayoutOptions = {
     noteImageSize?: number;
 }
 
-
+type GenerateLayoutImageOptions = GenerateImageOptions & {
+    /**
+     * Whether to overwrite the existing image on file
+     */
+    overwrite?: boolean;
+}
 
 
 /*
@@ -68,7 +72,7 @@ export class Layout {
     /**
      * ID of image representing layout
      */
-    image: LayoutId;
+    image: ImageId | LayoutImage;
     /**
      * Array containing IDs of individual images
      */
@@ -121,6 +125,9 @@ export class Layout {
 
             if (options.numCols || options.numRows) throw new Error('Cannot set width or height of layout when a pattern is provided.');
             if (options.ratio) throw new Error('Cannot set aspect ratio of layout when a pattern is provided.');
+
+            this.numRows = this.array.length;
+            this.numCols = this.array[0].length;
         }
         else {
             // Create random array based on list of art
@@ -201,6 +208,7 @@ export class Layout {
     }
 
     toJson(): LayoutObject {
+        //if (typeof this.image !== 'string') throw new Error('Cannot cast layout to JSON that contains an image subclass.');
         return {
             _id:this._id,
             name: this.name,
@@ -208,56 +216,38 @@ export class Layout {
             numRows:this.numRows,
             numCols:this.numCols,
             array: this.array,
-            image: this.image
+            image: ''//this.image
         };
     }
 
-    async generateImage(options: GenerateImageOptions): Promise<void> {
+    async generateImage(options: GenerateLayoutImageOptions): Promise<void> {
+
+        if (this.image) throw new Error('Image already exists. Please pass `overwrite: true` to overwrite existing image.');
+        if (!options || !options.outputType) throw new Error('Must specify an output file type.');
         console.log('Generating layout image...');
 
-        return;
-        /*
-
-        const LAYOUT_DIR = TEMP_LAYOUT_DIR+this.name;
-        
-
-        if (options.saveFile && !fs.existsSync(`${LAYOUT_DIR}/`)) {
-            fs.mkdirSync(`${LAYOUT_DIR}/`);
-            console.log(`Created output directory ${LAYOUT_DIR}`);
-        }
-
-        let imageObj;
-
         switch (options.outputType) {
+            case 'tif':
+            case 'tiff':
+                console.log(`[START] Creating stitched image...`);
+                this.image = new StitchedImage(this);
+                break;
             case 'DZI':
                 throw new Error('DZI has not been implemented');
-                imageObj = await dzi(this.toJson());
-                break;
-            case 'DZIFromStitch':
-                console.log('[START] Creating DZI and stitched image...')
-                imageObj = await dziFromStitch(this.toJson());
-                break;
-            case 'stitch':
-                console.log(`[START] Creating stitched image...`);
-                imageObj = await stitchedImage(this.toJson());
+                //imageObj = await dzi(this.toJson());
                 break;
             default:
                 throw new Error('Invalid output format provided to createLayoutImage')
         }
 
-        await imageObj.init({saveFiles:options.saveFile}, (imageObj) => {
-            console.log(`[DONE] Layout image generated. ${options.saveFile ? `Files saved to ${LAYOUT_DIR}.` : ''}`)
-        })
+        // Generate image using subclass, potentially save files to disk
+        await this.image.generate(options);
 
         // Save layout JSON to disk
         if (options.saveFile) {
-            const jsonName = `${LAYOUT_DIR}/${this.name}-layout.json`;
-            fs.writeFileSync(jsonName, JSON.stringify(this.toJson()));
-            console.log(`Saved ${jsonName}`);
-
-            // TODO save layout image to disk
-        } 
-        */
+            fs.writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.name}-manifest.json`, JSON.stringify(this.toJson()));
+            console.log(`Saved ${this.name} as a layout.`);
+        }
     }
 
     async insert() {
