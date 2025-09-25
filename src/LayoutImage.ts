@@ -112,8 +112,11 @@ export class LayoutImage {
             case 'tiff':
                 await this._tiffWithPyramids(options);
                 break;
+            case 'iiif':
+                await this._iiif(options);
+                break;
             case 'dzi':
-                throw new Error('Don\'t use this');
+                await this._dzi(options);
                 break;
         }
 
@@ -135,5 +138,28 @@ export class LayoutImage {
             tileWidth: minimumTileSize,
             tileHeight: minimumTileSize
         }).toFile(`${dirName}/${this.name}.tif`);
+    }
+
+    async _iiif(options: GenerateImageOptions): Promise<void> {
+        const dirName = `${cleanTrailingSlash(options.outputDir)}/${this.name}/`;
+
+        if (existsSync(dirName)) rmSync(dirName, {recursive:true});
+        mkdirSync(dirName);
+
+        await sharp(this.buffer).tile({
+            layout:'iiif3',
+            id:dirName
+        }).toFile(dirName);
+    }
+
+    async _dzi(options: GenerateImageOptions): Promise<void> {
+        const dirName = `${cleanTrailingSlash(options.outputDir)}/${this.name}/`;
+
+        if (existsSync(dirName)) rmSync(dirName, {recursive:true});
+        mkdirSync(dirName);
+
+        await sharp(this.buffer).tile({
+            layout:'dz',
+        }).toFile(dirName);
     }
 }
