@@ -96,3 +96,15 @@ export type DziImage = {
 export type StitchedImage = {
     Path: string;
 }
+
+
+export type GenerateImageOptions = {
+    /**
+     * Whether to save the output image as a file
+     */
+    saveFile: boolean;
+    /**
+     * 
+     */
+    outputType: string;
+}

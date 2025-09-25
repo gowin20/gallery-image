@@ -1,6 +1,5 @@
 import fs from 'fs';
-import type { LayoutObject, ArtId, LayoutId, ImageId } from '../types.js';
-import type { GenerateImageOptions } from '../image/LayoutImage.js';
+import type { LayoutObject, ArtId, LayoutId, ImageId, GenerateImageOptions } from '../types.js';
 
 const dzi = (layout) => {
     console.log('DZI')
@@ -216,10 +215,13 @@ export class Layout {
     async generateImage(options: GenerateImageOptions): Promise<void> {
         console.log('Generating layout image...');
 
+        return;
+        /*
+
         const LAYOUT_DIR = TEMP_LAYOUT_DIR+this.name;
         
 
-        if (options.filePath && !fs.existsSync(`${LAYOUT_DIR}/`)) {
+        if (options.saveFile && !fs.existsSync(`${LAYOUT_DIR}/`)) {
             fs.mkdirSync(`${LAYOUT_DIR}/`);
             console.log(`Created output directory ${LAYOUT_DIR}`);
         }
@@ -243,18 +245,19 @@ export class Layout {
                 throw new Error('Invalid output format provided to createLayoutImage')
         }
 
-        await imageObj.init({saveFiles:this.saveFiles}, (imageObj) => {
-            console.log(`[DONE] Layout image generated. ${options.filePath ? `Files saved to ${LAYOUT_DIR}.` : ''}`)
+        await imageObj.init({saveFiles:options.saveFile}, (imageObj) => {
+            console.log(`[DONE] Layout image generated. ${options.saveFile ? `Files saved to ${LAYOUT_DIR}.` : ''}`)
         })
 
         // Save layout JSON to disk
-        if (options.filePath) {
+        if (options.saveFile) {
             const jsonName = `${LAYOUT_DIR}/${this.name}-layout.json`;
             fs.writeFileSync(jsonName, JSON.stringify(this.toJson()));
             console.log(`Saved ${jsonName}`);
 
             // TODO save layout image to disk
         } 
+        */
     }
 
     async insert() {

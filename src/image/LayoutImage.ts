@@ -1,16 +1,5 @@
-import type { ImageObject } from '../types.js';
+import type { ImageObject, GenerateImageOptions } from '../types.js';
 import type { Layout } from '../layout/Layout.js';
-
-export type GenerateImageOptions = {
-    /**
-     * The path of a file string
-     */
-    filePath: string;
-    /**
-     * 
-     */
-    outputType: string;
-}
 
 export interface LayoutImage {
     /**

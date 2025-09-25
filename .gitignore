@@ -1,5 +1,6 @@
 data/
 dist/
 debug/
-
+db/
+temp/
 node_modules/
