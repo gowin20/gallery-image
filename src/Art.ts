@@ -3,6 +3,7 @@ import type { ArtObject, ArtId, ArtistId, ImageId } from "./types.js";
 import { cleanTrailingSlash, getFileName, getResourceBuffer } from "./Util.js";
 import type { GenerateImageOptions } from "./types.js"
 import { writeFileSync } from "fs";
+import { imageSize } from "image-size";
 
 export type ArtProperties = {
     /**
@@ -31,7 +32,7 @@ interface ArtOptions extends ArtObject {
     image?: ImageId;
 }
 
-interface GenerateThumbnailOptions extends GenerateImageOptions {
+interface GenerateOptions extends GenerateImageOptions {
     dirPath?: string;
 }
 
@@ -44,7 +45,11 @@ export class Art {
     orig: string | URL | Buffer;
     origName: string;
 
-    image: ImageId;
+    image: ImageId | Buffer;
+    dimensions: {
+        width: number;
+        height: number;
+    }
 
     thumbnails: {
         [_:`s-${number}px`]: string | URL | Buffer;
@@ -77,7 +82,7 @@ export class Art {
     }
 
     toJson(): ArtObject {
-        if (typeof this.orig === 'object' || Object.keys(this.thumbnails).map(thumbnail => typeof this.thumbnails[thumbnail] === 'object')) throw new Error('Cannot convert to JSON: Object contains unsaved buffers');
+        if (typeof this.orig === 'object' || typeof this.image === 'object' || Object.keys(this.thumbnails).map(thumbnail => typeof this.thumbnails[thumbnail] === 'object')) throw new Error('Cannot convert to JSON: Object contains unsaved buffers');
         return {
             _id: this._id,
             orig: this.orig,
@@ -98,7 +103,7 @@ export class Art {
         if (this.thumbnailExists(thumbnailSize)) return this.thumbnails[thumbnailName(thumbnailSize)];
         else return null;
     }
-    async generateThumbnail(thumbnailSize: number, options?: GenerateThumbnailOptions) {
+    async generateThumbnail(thumbnailSize: number, options?: GenerateOptions): Promise<Buffer> {
         if (this.thumbnailExists(thumbnailSize)) {
             throw new Error(`Thumbnail of size ${thumbnailSize} already exists for ${this.origName}.`)
             return;
@@ -125,6 +130,38 @@ export class Art {
             console.log(`Saved thumbnail ${thisThumbnail} to ${options.dirPath}.`);
         }
 
-        return;
+        return thumbnailBuffer;
+    }
+
+    pyramidExists(): boolean {
+        return this.image !== undefined;
+    }
+    async generatePyramid(options: GenerateOptions): Promise<Buffer> {
+        if (this.image) throw new Error('Image pyramid already exists.');
+
+        const origBuffer = await getResourceBuffer(this.orig as string | URL);
+
+        const dimensions = imageSize(origBuffer);
+        console.log('Image dimensions result:')
+        console.log(dimensions)
+
+        this.dimensions = {
+            height: dimensions.height,
+            width: dimensions.width
+        }
+
+        const pyramidBuffer = await sharp(origBuffer).tiff({
+            pyramid: true,
+            tile: true
+        }).toBuffer();
+        this.image = pyramidBuffer;
+
+        if (options?.saveFile) {
+
+            writeFileSync(`${cleanTrailingSlash(options.dirPath)}/${this.origName}-tiled.tiff`, pyramidBuffer);
+            console.log('Wrote pyramid TIFF to temp directory.');
+        }
+
+        return pyramidBuffer;
     }
 }
