@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import { parse } from "path";
-import { read, readFileSync } from "fs";
+import { writeFileSync, readFileSync } from "fs";
 
 const urlRegex = /^(http|https):\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?$/;
 
@@ -46,4 +46,10 @@ export const getFileName = (filePathOrUrl: string | URL): string => {
 
 export const cleanTrailingSlash = (path) => {
     return path.replace(/([^/])\/+$/, '$1');
+}
+
+export const saveImage = async (outputDir, fileName: string, buffer: Buffer) => {
+    if (!outputDir) throw new Error('Must provide a directory path with `outputDir` to save file.');
+
+    writeFileSync(`${cleanTrailingSlash(outputDir)}/${fileName}`, buffer);
 }

@@ -1,9 +1,11 @@
+import { LayoutImage } from "./LayoutImage.ts";
+
 export type LayoutId = string;
 export type ImageId = string;
 export type ArtId = string;
 export type ArtistId = string;
 
-export interface LayoutObject {
+export interface DbLayoutObject {
     /**
      * Database ID
      */
@@ -13,13 +15,13 @@ export interface LayoutObject {
      */
     name: string;
     /**
-     * ID of image representing layout
+     * URL of image representing layout
      */
-    image: ImageId;
+    image: string | URL;
     /**
      * Array containing IDs of individual images
      */
-    array: ArtId[][];
+    array: ArtId[][]; // Major difference in DB
     /**
      * Equivalent to length of array
      */
@@ -34,7 +36,39 @@ export interface LayoutObject {
     noteImageSize: number;
 }
 
-export interface ArtObject {
+export interface LayoutObject {
+    /**
+     * Database ID
+     */
+    _id: string;
+    /**
+     * Name of layout
+     */
+    name: string;
+    /**
+     * URL of image representing layout
+     */
+    image: URL | string | LayoutImage;
+    /**
+     * Array of art images
+     */
+    array: ArtObject[][];
+    /**
+     * Equivalent to length of array
+     */
+    numRows: number;
+    /**
+     * Equivalent to length of inner arrays
+     */
+    numCols: number;
+    /**
+     * All of the art in this layout uses a consistent image size.
+     */
+    noteImageSize: number;
+}
+
+
+export interface OldArtObject {
     /**
      * Database ID
      */
@@ -42,7 +76,7 @@ export interface ArtObject {
     /**
      * Full resolution image
      */
-    orig: string | URL;
+    orig: URL | string;
     /**
      * Zoomable image of art
      */
@@ -51,7 +85,7 @@ export interface ArtObject {
      * URLs to cached thumbnail versions of the art, in different sizes
      */
     thumbnails: {
-        [_:`s-${number}px`]: string | URL;
+        [_:`s-${number}px`]: URL | string;
     };
     /**
      * Creator of the art
@@ -73,6 +107,54 @@ export interface ArtObject {
      * Location where it was created
      */
     location?: string | null;
+}
+
+export interface ArtObject {
+    /**
+     * Database ID
+     */
+    _id: string;
+    /**
+     * Original source of image
+     */
+    source: URL | string | Buffer;
+    /**
+     * Full resolution image as tif
+     */
+    image: URL | string | Buffer;
+    /**
+     * Thumbnail versions of the art, cached or in memory, of different sizes
+     */
+    thumbnails: {
+        [_:`s-${number}px`]: URL | string | Buffer;
+    };
+    /**
+     * Properties and metadata
+     */
+    metadata: ArtMetadata;
+}
+
+export type ArtMetadata = {
+    /**
+     * Creator of the art
+     */
+    creator?: ArtistId;
+    /**
+     * Title of piece.
+     */
+    title?: string;
+    /**
+     * Details / statement related to piece.
+     */
+    details?: string;
+    /**
+     * Date of creation
+     */
+    date?: string | Date;
+    /**
+     * Location where it was created
+     */
+    location?: string;
 }
 
 export interface ImageObject {

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import type { LayoutObject, ArtId, LayoutId, ImageId, GenerateImageOptions } from './types.js';
+import type { LayoutObject, ArtId, ArtObject, ImageId, GenerateImageOptions } from './types.js';
 import { LayoutImage } from './LayoutImage.js';
 import { cleanTrailingSlash } from './Util.js';
 
@@ -19,12 +19,12 @@ const dziFromStitch = (layout) => {
 // note becomes generic "art" class
 // layout is a layout of art
 
-export type LayoutOptions = {
+type LayoutOptions = {
     name: string;
     // Options for a preset arrangement of notes
-    array?: ArtId[][];
+    array?: ArtObject[][];
     // Options for a specific set of notes in random order
-    artIds?: ArtId[];
+    artList?: ArtObject[];
     ratio: number;
     numRows: number;
     numCols: number;
@@ -71,11 +71,11 @@ export class Layout {
     /**
      * ID of image representing layout
      */
-    image: ImageId | LayoutImage;
+    image: string | URL | LayoutImage;
     /**
      * Array containing IDs of individual images
      */
-    array: ArtId[][];
+    array: ArtObject[][];
     /**
      * Equivalent to length of array
      */
@@ -130,7 +130,7 @@ export class Layout {
         }
         else {
             // Create random array based on list of art
-            if (!options.artIds) throw new Error('No art IDs passed for random pattern generation.');
+            if (!options.artList) throw new Error('No art IDs passed for random pattern generation.');
 
             if ((options.numRows || options.numCols) && options.ratio) throw new Error('Cannot pass both numRows\/numCols and ratio.');
 
@@ -141,7 +141,7 @@ export class Layout {
             }
             
             this.array = this._makeRandomPattern({
-                artIds: options.artIds,
+                artList: options.artList,
                 ratio: options.ratio ? options.ratio : 9/16
             });
             
@@ -157,13 +157,13 @@ export class Layout {
      * @param options 
      * @returns 
      */
-    _makeRandomPattern(options: {artIds: ArtId[], ratio: number}): ArtId[][] {
+    _makeRandomPattern(options: {artList: ArtObject[], ratio: number}): ArtObject[][] {
         if (this._id) throw new Error('Layout was initialized with an ID. Cannot make random pattern.')
         console.log('Creating random pattern...')
     
-        if (!options.artIds) throw new Error('No art provided to \'makeRandomPattern()\'');
+        if (!options.artList) throw new Error('No art provided to \'makeRandomPattern()\'');
     
-        const totalNotes = options.artIds.length;
+        const totalNotes = options.artList.length;
     
         let width, height;
         if (this.numCols && this.numRows) { // Use number of rows and cols if available
@@ -181,7 +181,7 @@ export class Layout {
             if (width*(height-1) >= totalNotes) height -= 1;
         }
     
-        const pattern: ArtId[][] = [];
+        const pattern: ArtObject[][] = [];
         const usedNotes = new Set();
     
         for (let row=0;row<height;row++) {
@@ -196,7 +196,7 @@ export class Layout {
                     i = Math.floor(Math.random()*totalNotes);
                 } while (usedNotes.has(i));
         
-                thisRow.push(options.artIds[i])
+                thisRow.push(options.artList[i])
                 usedNotes.add(i);
             }
             pattern.push(thisRow);

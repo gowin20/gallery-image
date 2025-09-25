@@ -49,12 +49,11 @@ export class LayoutImage {
         const blocks: ArtBlock[] = [];
 
         this.layout.array.forEach(async (row, y, array) => {
-            row.forEach(async (artId, x, row) => {
+            row.forEach(async (artObject, x, row) => {
                 // Every 10 times this runs is approx. 45s
                 try {
-                    const artObj = getArtById(artId);
-                    const art = new Art(artObj)
-                    
+                    const art = new Art(artObject);
+
                     if (!art.thumbnailExists(noteImageSize)) {
                         await art.generateThumbnail(noteImageSize, {
                             saveFile: false
@@ -72,14 +71,13 @@ export class LayoutImage {
                     blocks.push(artBlock);
 
                     totalDone++;
-                    console.log(`[${totalDone}/${totalEstimate}] ${art.origName} fetched...`);
+                    console.log(`[${totalDone}/${totalEstimate}] ${art.sourceName} fetched...`);
                 }
                 catch (e) {
                     totalDone++;
                     console.error(e);
                 }
             });
-
         })
 
         // Wait until all images are processed
@@ -91,7 +89,6 @@ export class LayoutImage {
                 };
             }, 100);
         })
-
         console.log(`Loaded ${totalDone} images. Stitching...`);
 
         // Generate large blank image in temp folder
@@ -106,7 +103,7 @@ export class LayoutImage {
             quality:100
         }).toBuffer();
 
-
+        // Generate and save image
         switch (options.outputType) {
             case 'tif':
             case 'tiff':
@@ -121,7 +118,6 @@ export class LayoutImage {
         }
 
         console.log(`Pattern fully stitched. File(s) saved to ${options.outputDir}.`);
-
         return this;
     };
 
