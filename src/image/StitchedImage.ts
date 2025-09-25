@@ -117,7 +117,7 @@ export class StitchedImage implements LayoutImage {
             case 'tiff':
                 await sharp(canvas).tiff({
                     pyramid:true,
-                    tile:true,
+                    tile:true, // Not sure this flag matters since pyramid is true
                     tileWidth: minimumTileSize,
                     tileHeight: minimumTileSize
                 }).toFile(`${dirName}/${this.name}.tif`);
