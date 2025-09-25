@@ -1,12 +1,12 @@
 import { Art, Layout } from "../gallery-image.js";
 import { LayoutImage } from "./LayoutImage.js";
 import type { ArtId, GenerateImageOptions } from "../types.js";
+import { existsSync, rmSync, mkdirSync } from "fs";
 import sharp from "sharp";
-
+import { cleanTrailingSlash } from "../Util.js";
 // TODO REMOVE THIS
 import allNotes from '../../data/all-notes.json' with {type:'json'};
-import { writeFileSync } from "fs";
-import { cleanTrailingSlash } from "../Util.js";
+
 const getArtById = (artId: ArtId) => {
     for (const art of allNotes) {
         if (art._id === artId) return art;
@@ -34,6 +34,9 @@ export class StitchedImage implements LayoutImage {
     };
 
     async generate (options: GenerateImageOptions): Promise<StitchedImage> {
+        if (!options.outputType) throw new Error('Must provide output type.');
+        if (!options.outputDir) throw new Error('Must provide output directory.');
+        if (!options.saveFile) throw new Error('saveFile must be true, generating an image will always save a file.');
 
         const noteImageSize = this.layout.noteImageSize;
 
@@ -91,6 +94,7 @@ export class StitchedImage implements LayoutImage {
         })
 
         console.log(`Loaded ${totalDone} images. Stitching...`);
+
         // Generate large blank image in temp folder
         let canvas = await sharp({
             create: {
@@ -100,17 +104,30 @@ export class StitchedImage implements LayoutImage {
                 background: { r: 48, g: 48, b: 48, alpha: 1 } // #303030 - same as site background
             }
         }).composite(blocks).tiff({
-            pyramid:true,
-            tile:true
+            quality:100
         }).toBuffer();
 
-        this.buffer = canvas;
-        console.log('Pattern fully stitched.');
+        const dirName = cleanTrailingSlash(options.outputDir)
+        
+        let minimumTileSize = noteImageSize;
+        while (minimumTileSize % 2 == 0 && minimumTileSize >= 512) minimumTileSize /= 2;
 
-        if (options?.saveFile) {
-            writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.name}.tif`, canvas);
-            console.log('Successfully wrote pyramid TIFF to output directory.');
+        switch (options.outputType) {
+            case 'tif':
+            case 'tiff':
+                await sharp(canvas).tiff({
+                    pyramid:true,
+                    tile:true,
+                    tileWidth: minimumTileSize,
+                    tileHeight: minimumTileSize
+                }).toFile(`${dirName}/${this.name}.tif`);
+                break;
+            case 'dzi':
+                throw new Error('Don\'t use this');
+                break;
         }
+
+        console.log(`Pattern fully stitched. File(s) saved to ${options.outputDir}.`);
 
         return this;
     };

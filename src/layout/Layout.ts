@@ -226,19 +226,7 @@ export class Layout {
         if (!options || !options.outputType) throw new Error('Must specify an output file type.');
         console.log('Generating layout image...');
 
-        switch (options.outputType) {
-            case 'tif':
-            case 'tiff':
-                console.log(`[START] Creating stitched image...`);
-                this.image = new StitchedImage(this);
-                break;
-            case 'DZI':
-                throw new Error('DZI has not been implemented');
-                //imageObj = await dzi(this.toJson());
-                break;
-            default:
-                throw new Error('Invalid output format provided to createLayoutImage')
-        }
+        this.image = new StitchedImage(this);
 
         // Generate image using subclass, potentially save files to disk
         await this.image.generate(options);
@@ -267,5 +255,16 @@ export class Layout {
     }
     async startGeneration() {
         //TODO
+    }
+
+    // creates an array filled with random notes based on a template
+    randomFromTemplate(template: ArtId[][]) {
+        /**
+         * 0 0 1
+         * 1 1 0
+         * 0 1 0
+         */
+
+        // TODO
     }
 }

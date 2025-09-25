@@ -110,5 +110,5 @@ export type GenerateImageOptions = {
     /**
      * 
      */
-    outputType?: string;
+    outputType?: 'tif' | 'tiff' | 'dzi' | 'iiif';
 }
