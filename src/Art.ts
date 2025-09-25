@@ -99,9 +99,26 @@ export class Art {
     thumbnailExists(thumbnailSize: number): boolean {
         return Object.keys(this.thumbnails).includes(thumbnailName(thumbnailSize));
     }
-    getThumbnails(thumbnailSize: number): {[_:`s-${number}px`]:string} {
+    getThumbnail(thumbnailSize: number): string | URL | Buffer {
         if (this.thumbnailExists(thumbnailSize)) return this.thumbnails[thumbnailName(thumbnailSize)];
         else return null;
+    }
+    /*
+    Returns thumbnail as a buffer
+    */
+    async loadThumbnail(thumbnailSize: number): Promise<Buffer> {
+
+        if (!this.thumbnailExists(thumbnailSize)) throw new Error('Cannot load a thumbnail that doesn\'t exist');
+
+        let thumbnail = this.thumbnails[thumbnailName(thumbnailSize)]
+
+        if (thumbnail instanceof Buffer) return thumbnail;
+        else {
+           const loadedThumbnail = await getResourceBuffer(thumbnail);
+           this.thumbnails[thumbnailName(thumbnailSize)] = loadedThumbnail;
+
+           return loadedThumbnail;
+        }
     }
     async generateThumbnail(thumbnailSize: number, options?: GenerateOptions): Promise<Buffer> {
         if (this.thumbnailExists(thumbnailSize)) {
