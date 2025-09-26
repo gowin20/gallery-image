@@ -3,22 +3,6 @@ import type { LayoutObject, ArtId, ArtObject, ImageId, GenerateImageOptions } fr
 import { LayoutImage } from './LayoutImage.js';
 import { cleanTrailingSlash } from './Util.js';
 
-const dzi = (layout) => {
-    console.log('DZI')
-    return;
-}
-const stitchedImage = (layout) => {
-    console.log('Stitched image');
-    return;
-}
-const dziFromStitch = (layout) => {
-    console.log('DZI from stitch');
-    return;
-}
-
-// note becomes generic "art" class
-// layout is a layout of art
-
 type LayoutOptions = {
     name: string;
     // Options for a preset arrangement of notes

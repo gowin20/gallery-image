@@ -1,17 +1,8 @@
 import { Art, Layout } from "./gallery-image.js";
-import type { ArtId, GenerateImageOptions } from "./types.js";
+import type { GenerateImageOptions } from "./types.js";
 import { existsSync, rmSync, mkdirSync } from "fs";
 import sharp from "sharp";
 import { cleanTrailingSlash } from "./Util.js";
-// TODO REMOVE THIS
-import allNotes from '../data/all-notes.json' with {type:'json'};
-
-const getArtById = (artId: ArtId) => {
-    for (const art of allNotes) {
-        if (art._id === artId) return art;
-    }
-    return null;
-}
 
 type ArtBlock = {
     input: Buffer;
