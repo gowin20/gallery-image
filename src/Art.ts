@@ -1,12 +1,103 @@
 import sharp from "sharp";
-import type { ArtObject, ArtMetadata, ArtId, ImageId, OldArtObject } from "./types.js";
 import { getFileName, getResourceBuffer, saveImage } from "./Util.js";
-import type { GenerateImageOptions } from "./types.js"
+import type { GenerateImageOptions, ImageId } from "./LayoutImage.js"
 import { imageSize } from "image-size";
 
+export type ArtistId = string;
+
+export interface OldArtObject {
+    /**
+     * Database ID
+     */
+    _id: string;
+    /**
+     * Full resolution image
+     */
+    orig: URL | string;
+    /**
+     * Zoomable image of art
+     */
+    tiles?: ImageId;
+    /**
+     * URLs to cached thumbnail versions of the art, in different sizes
+     */
+    thumbnails: {
+        [_:`s-${number}px`]: URL | string;
+    };
+    /**
+     * Creator of the art
+     */
+    creator?: ArtistId | null;
+    /**
+     * Title of piece.
+     */
+    title?: string | null;
+    /**
+     * Details / statement related to piece.
+     */
+    details?: string | null;
+    /**
+     * Date of creation
+     */
+    date: string | Date | null;
+    /**
+     * Location where it was created
+     */
+    location?: string | null;
+}
+
+export interface ArtObject {
+    /**
+     * Database ID
+     */
+    _id: string;
+    /**
+     * Original source of image
+     */
+    source: URL | string | Buffer;
+    /**
+     * Full resolution image as tif
+     */
+    image: URL | string | Buffer;
+    /**
+     * Thumbnail versions of the art, cached or in memory, of different sizes
+     */
+    thumbnails: {
+        [_:`s-${number}px`]: URL | string | Buffer;
+    };
+    /**
+     * Properties and metadata
+     */
+    metadata: ArtMetadata;
+}
+
+export type ArtMetadata = {
+    /**
+     * Creator of the art
+     */
+    creator?: ArtistId;
+    /**
+     * Title of piece.
+     */
+    title?: string;
+    /**
+     * Details / statement related to piece.
+     */
+    details?: string;
+    /**
+     * Date of creation
+     */
+    date?: string | Date;
+    /**
+     * Location where it was created
+     */
+    location?: string;
+}
+
+export type ArtId = string;
 type ArtOptions = ArtObject | OldArtObject;
 
-const thumbnailName = (number: number) => `s-${number}px`;
+const thumbnailName = (number: number) => number;
 
 export class Art {
 
@@ -22,7 +113,7 @@ export class Art {
     }
 
     thumbnails: {
-        [_:`s-${number}px`]: string | URL | Buffer;
+        [_:`${number}`]: string | URL | Buffer;
     }
 
     metadata: ArtMetadata;
@@ -60,7 +151,16 @@ export class Art {
         
         if (artObject._id) this._id = artObject._id;
 
-        this.thumbnails = artObject.thumbnails ? artObject.thumbnails : {};
+        // Pase old thumbnail names
+        this.thumbnails = {};
+        if (artObject.thumbnails) {
+
+            Object.keys(artObject.thumbnails).forEach((thumbnailName: `s-${number}px`) => {
+                const thumbnailSize = thumbnailName.match(/\d+/)[0];
+                
+                this.thumbnails[thumbnailSize] = artObject.thumbnails[thumbnailName];
+            })
+        }
 
         this.metadata = {
             title: artObject.title ? artObject.title : null,
@@ -81,16 +181,16 @@ export class Art {
             _id: this._id,
             source: this.source,
             image: this.image,
-            thumbnails: this.thumbnails as {[_:`s-${number}px`]: string | URL},
+            thumbnails: this.thumbnails as {[_:`${number}`]: string | URL},
             metadata: this.metadata
         }
     }
 
     thumbnailExists(thumbnailSize: number): boolean {
-        return Object.keys(this.thumbnails).includes(thumbnailName(thumbnailSize));
+        return Object.keys(this.thumbnails).includes(String(thumbnailSize));
     }
     getThumbnail(thumbnailSize: number): string | URL | Buffer {
-        if (this.thumbnailExists(thumbnailSize)) return this.thumbnails[thumbnailName(thumbnailSize)];
+        if (this.thumbnailExists(thumbnailSize)) return this.thumbnails[thumbnailSize];
         else return null;
     }
     /*
@@ -100,12 +200,12 @@ export class Art {
 
         if (!this.thumbnailExists(thumbnailSize)) throw new Error('Cannot load a thumbnail that doesn\'t exist');
 
-        let thumbnail = this.thumbnails[thumbnailName(thumbnailSize)]
+        let thumbnail = this.thumbnails[thumbnailSize]
 
         if (thumbnail instanceof Buffer) return thumbnail;
         else {
            const loadedThumbnail = await getResourceBuffer(thumbnail);
-           this.thumbnails[thumbnailName(thumbnailSize)] = loadedThumbnail;
+           this.thumbnails[thumbnailSize] = loadedThumbnail;
 
            return loadedThumbnail;
         }
@@ -117,7 +217,7 @@ export class Art {
         };
         if (!this.source) throw new Error('Must have a full-resolution original image to build thumbnails.');
 
-        const thisThumbnail = thumbnailName(thumbnailSize);
+        const thisThumbnail = thumbnailSize;
 
         let origBuffer: Buffer;
         if (this.source instanceof Buffer) origBuffer = this.source;
@@ -125,13 +225,13 @@ export class Art {
 
         // Create thumbnail and add to thumbnail object
         const thumbnailBuffer = await sharp(origBuffer).resize({width:thumbnailSize}).jpeg().toBuffer();
-        this.thumbnails[thisThumbnail] = thumbnailBuffer;
+        this.thumbnails[thumbnailSize] = thumbnailBuffer;
         
 
         console.log(`Created thumbnail for ${this.sourceName}.`);
         // save image
         if (options?.saveFile) {
-            saveImage(options.outputDir,`${this.sourceName}-${thisThumbnail}.jpeg`, thumbnailBuffer);
+            saveImage(options.outputDir,`${this.sourceName}-${thumbnailSize}px.jpeg`, thumbnailBuffer);
             console.log(`Saved thumbnail ${thisThumbnail} to ${options.outputDir}.`);
         }        
         return thumbnailBuffer;

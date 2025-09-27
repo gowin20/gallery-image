@@ -1,7 +1,72 @@
 import fs from 'fs';
-import type { LayoutObject, ArtId, ArtObject, ImageId, GenerateImageOptions } from './types.js';
-import { LayoutImage } from './LayoutImage.js';
+import { LayoutImage, GenerateImageOptions } from './LayoutImage.js';
 import { cleanTrailingSlash } from './Util.js';
+import type { ArtId, ArtObject } from './Art.js';
+
+export type LayoutId = string;
+
+export interface DbLayoutObject {
+    /**
+     * Database ID
+     */
+    _id: string;
+    /**
+     * Name of layout
+     */
+    name: string;
+    /**
+     * URL of image representing layout
+     */
+    image: string | URL;
+    /**
+     * Array containing IDs of individual images
+     */
+    array: ArtId[][]; // Major difference in DB
+    /**
+     * Equivalent to length of array
+     */
+    numRows: number;
+    /**
+     * Equivalent to length of inner arrays
+     */
+    numCols: number;
+    /**
+     * All of the art in this layout uses a consistent image size.
+     */
+    noteImageSize: number;
+}
+
+export interface LayoutObject {
+    /**
+     * Database ID
+     */
+    _id: string;
+    /**
+     * Name of layout
+     */
+    name: string;
+    /**
+     * URL of image representing layout
+     */
+    image: URL | string | LayoutImage;
+    /**
+     * Array of art images
+     */
+    array: ArtObject[][];
+    /**
+     * Equivalent to length of array
+     */
+    numRows: number;
+    /**
+     * Equivalent to length of inner arrays
+     */
+    numCols: number;
+    /**
+     * All of the art in this layout uses a consistent image size.
+     */
+    noteImageSize: number;
+}
+
 
 type LayoutOptions = {
     name: string;

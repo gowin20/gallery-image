@@ -1,5 +1,4 @@
 import { Art, Layout } from "./gallery-image.js";
-import type { GenerateImageOptions } from "./types.js";
 import { existsSync, rmSync, mkdirSync } from "fs";
 import sharp from "sharp";
 import { cleanTrailingSlash } from "./Util.js";
@@ -8,6 +7,45 @@ type ArtBlock = {
     input: Buffer;
     top: number;
     left: number;
+}
+
+export type ImageId = string;
+
+export interface ImageObject {
+    _id: string;
+    type?: "stitch" | "dzi";
+    Image: DziImage | StitchedImage;
+}
+
+export type DziImage = {
+    Url: string;
+    xmlns: string;
+    Format: "jpeg";
+    Overlap: number;
+    TileSize: number;
+    Size: {
+        Width: number;
+        Height: number;
+    }
+}
+
+export type StitchedImage = {
+    Path: string;
+}
+
+export type GenerateImageOptions = {
+    /**
+     * Whether to save the output image as a file
+     */
+    saveFile: boolean;
+    /**
+     * Output directory
+     */
+    outputDir?: string;
+    /**
+     * 
+     */
+    outputType?: 'tif' | 'tiff' | 'dzi' | 'iiif';
 }
 
 export class LayoutImage {
