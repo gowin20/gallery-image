@@ -1,7 +1,6 @@
 import sharp from "sharp";
 import { getFileName, getResourceBuffer, saveImage } from "./Util.js";
 import type { GenerateImageOptions, ImageId } from "./LayoutImage.js"
-import { imageSize } from "image-size";
 
 export type ArtistId = string;
 
@@ -22,7 +21,7 @@ export interface OldArtObject {
      * URLs to cached thumbnail versions of the art, in different sizes
      */
     thumbnails: {
-        [_:`s-${number}px`]: URL | string;
+        [_:`${number}`]: URL | string;
     };
     /**
      * Creator of the art
@@ -52,21 +51,17 @@ export interface ArtObject {
      */
     _id: string;
     /**
-     * Original source of image
+     * Original image: full resolution, preferably .tiff
      */
     source: URL | string | Buffer;
     /**
-     * Full resolution image as tif
-     */
-    image: URL | string | Buffer;
-    /**
-     * Thumbnail versions of the art, cached or in memory, of different sizes
+     * Thumbnail versions of the image in various resolutions.
      */
     thumbnails: {
-        [_:`s-${number}px`]: URL | string | Buffer;
+        [_:`${number}`]: URL | string | Buffer;
     };
     /**
-     * Properties and metadata
+     * Image properties and metadata
      */
     metadata: ArtMetadata;
 }
@@ -105,8 +100,6 @@ export class Art {
 
     source: string | URL | Buffer;
     sourceName: string;
-
-    image: ImageId | Buffer;
     dimensions: {
         width: number;
         height: number;
@@ -155,7 +148,7 @@ export class Art {
         this.thumbnails = {};
         if (artObject.thumbnails) {
 
-            Object.keys(artObject.thumbnails).forEach((thumbnailName: `s-${number}px`) => {
+            Object.keys(artObject.thumbnails).forEach((thumbnailName: `${number}`) => {
                 const thumbnailSize = thumbnailName.match(/\d+/)[0];
                 
                 this.thumbnails[thumbnailSize] = artObject.thumbnails[thumbnailName];
@@ -174,13 +167,12 @@ export class Art {
     }
 
     toJson(): ArtObject {
-        if (typeof this.source === 'object' || typeof this.image === 'object' || Object.keys(this.thumbnails).map(thumbnail => typeof this.thumbnails[thumbnail] === 'object')) throw new Error('Cannot convert to JSON: Object contains unsaved buffers');
+        if (typeof this.source === 'object' || Object.keys(this.thumbnails).map(thumbnail => typeof this.thumbnails[thumbnail] === 'object')) throw new Error('Cannot convert to JSON: Object contains unsaved buffers');
         // TODO save all thumbnails and orig first!
         
         return {
             _id: this._id,
             source: this.source,
-            image: this.image,
             thumbnails: this.thumbnails as {[_:`${number}`]: string | URL},
             metadata: this.metadata
         }
@@ -237,31 +229,19 @@ export class Art {
         return thumbnailBuffer;
     }
 
-    pyramidExists(): boolean {
-        return this.image !== undefined;
-    }
-    async generatePyramid(options: GenerateImageOptions): Promise<Buffer> {
-        if (this.image) throw new Error('Image pyramid already exists.');
+    async createSourcePyramid(options: GenerateImageOptions): Promise<Buffer> {
+        if (this.source instanceof Buffer) throw new Error('Source is already loaded as a TIFF buffer.');
 
         const origBuffer = await getResourceBuffer(this.source as string | URL);
-
-        const dimensions = imageSize(origBuffer);
-        console.log('Image dimensions result:')
-        console.log(dimensions)
-
-        this.dimensions = {
-            height: dimensions.height,
-            width: dimensions.width
-        }
 
         const pyramidBuffer = await sharp(origBuffer).tiff({
             pyramid: true,
             tile: true
         }).toBuffer();
-        this.image = pyramidBuffer;
+        this.source = pyramidBuffer;
 
         if (options?.saveFile) {
-            saveImage(options.outputDir,`${this.sourceName}-image.tiff`, pyramidBuffer);
+            saveImage(options.outputDir,`${this.sourceName}.tiff`, pyramidBuffer);
             console.log('Wrote pyramid TIFF to temp directory.');
         }
 
