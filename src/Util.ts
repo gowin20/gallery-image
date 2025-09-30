@@ -3,13 +3,20 @@ import { parse } from "path";
 import { writeFileSync, readFileSync } from "fs";
 
 const urlRegex = /^(http|https):\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?$/;
+const httpRegex = /^(http|https)*/;
 
 export const getResourceBuffer = async (filePathOrUrl: string | URL): Promise<Buffer> => {
 
     let imageBuffer: Buffer;
     // If URL
-    if (filePathOrUrl instanceof URL || urlRegex.test(filePathOrUrl)) {
-        const origImage = await fetch(filePathOrUrl);
+    if (filePathOrUrl instanceof URL || urlRegex.test(filePathOrUrl) || httpRegex.test(filePathOrUrl)) {
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const origImage = await fetch(filePathOrUrl, { signal: controller.signal });
+
+        clearTimeout(timeout);
 
         const imageBody = await origImage.arrayBuffer();
 

@@ -114,14 +114,12 @@ export class LayoutImage {
                     }
 
                     blocks.push(artBlock);
-
-                    totalDone++;
                     if (logLevel !== 'none') console.log(`[${totalDone}/${totalCount}] ${art.sourceName} fetched...`);
                 }
                 catch (e) {
-                    totalDone++;
                     if (logLevel !== 'none') console.error(e);
                 }
+                totalDone++;
                 x++;
             }
             y++;
