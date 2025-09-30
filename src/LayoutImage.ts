@@ -92,8 +92,9 @@ export class LayoutImage {
 
         const blocks: ArtBlock[] = [];
 
-        this.layout.array.forEach(async (row, y, array) => {
-            row.forEach(async (artObject, x, row) => {
+        let x=0, y=0;
+        for (const row of this.layout.array) {
+            for (const artObject of row) {
                 // Every 10 times this runs is approx. 45s
                 try {
                     const art = new Art(artObject);
@@ -121,10 +122,10 @@ export class LayoutImage {
                     totalDone++;
                     if (logLevel !== 'none') console.error(e);
                 }
-            });
-
-            setTimeout(() => {}, 10000);
-        })
+                x++;
+            }
+            y++;
+        }
 
         // Wait until all images are processed
         await new Promise((resolve) => {
