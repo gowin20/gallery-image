@@ -170,38 +170,41 @@ export class LayoutImage {
 
     async _tiffWithPyramids(options: GenerateImageOptions): Promise<void> {
 
+        const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
         const dirName = cleanTrailingSlash(options.outputDir)
         
         let minimumTileSize = this.layout.noteImageSize - (this.layout.noteImageSize % 16);
         while (minimumTileSize % 16 == 0 && minimumTileSize > 256) minimumTileSize /= 2;
 
-        await sharp(this.buffer).tiff({
+        await sharp(this.buffer, sharpOptions).tiff({
             pyramid:true,
             tile:true, // Not sure this flag matters since pyramid is true
             tileWidth: minimumTileSize,
-            tileHeight: minimumTileSize
+            tileHeight: minimumTileSize,
         }).toFile(`${dirName}/${this.name}.tif`);
     }
 
     async _iiif(options: GenerateImageOptions): Promise<void> {
+        const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
         const dirName = `${cleanTrailingSlash(options.outputDir)}/${this.name}/`;
 
         if (existsSync(dirName)) rmSync(dirName, {recursive:true});
         mkdirSync(dirName);
 
-        await sharp(this.buffer).tile({
+        await sharp(this.buffer, sharpOptions).tile({
             layout:'iiif3',
             id:dirName
         }).toFile(dirName);
     }
 
     async _dzi(options: GenerateImageOptions): Promise<void> {
+        const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
         const dirName = `${cleanTrailingSlash(options.outputDir)}/${this.name}/`;
 
         if (existsSync(dirName)) rmSync(dirName, {recursive:true});
         mkdirSync(dirName);
 
-        await sharp(this.buffer).tile({
+        await sharp(this.buffer, sharpOptions).tile({
             layout:'dz',
         }).toFile(dirName);
     }
