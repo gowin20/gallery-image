@@ -70,7 +70,7 @@ export type ArtMetadata = {
     /**
      * Creator of the art
      */
-    creator?: ArtistId;
+    creator?: ArtistId | string;
     /**
      * Title of piece.
      */
@@ -90,7 +90,6 @@ export type ArtMetadata = {
 }
 
 export type ArtId = string;
-type ArtOptions = ArtObject | OldArtObject;
 
 const thumbnailName = (number: number) => number;
 
@@ -111,7 +110,7 @@ export class Art {
 
     metadata: ArtMetadata;
 
-    constructor(options: ArtOptions) {
+    constructor(options: ArtObject | OldArtObject) {
 
         if ((options as OldArtObject).orig) {
             this.fromOldArtObject(options as OldArtObject);
@@ -203,6 +202,9 @@ export class Art {
         }
     }
     async generateThumbnail(thumbnailSize: number, options?: GenerateImageOptions): Promise<Buffer> {
+        if (!thumbnailSize) throw new Error('Thumbnail size is required.');
+        const logLevel = options.logLevel ? options.logLevel : {};
+
         if (this.thumbnailExists(thumbnailSize)) {
             throw new Error(`Thumbnail of size ${thumbnailSize} already exists for ${this.sourceName}.`)
             return;
@@ -220,18 +222,19 @@ export class Art {
         this.thumbnails[thumbnailSize] = thumbnailBuffer;
         
 
-        console.log(`Created thumbnail for ${this.sourceName}.`);
+        if (logLevel !== 'none') console.log(`Created thumbnail for ${this.sourceName}.`);
         // save image
         if (options?.saveFile) {
             saveImage(options.outputDir,`${this.sourceName}-${thumbnailSize}px.jpeg`, thumbnailBuffer);
-            console.log(`Saved thumbnail ${thisThumbnail} to ${options.outputDir}.`);
+            if (logLevel !== 'none') console.log(`Saved thumbnail ${thisThumbnail} to ${options.outputDir}.`);
         }        
         return thumbnailBuffer;
     }
 
     async createSourcePyramid(options: GenerateImageOptions): Promise<Buffer> {
         if (this.source instanceof Buffer) throw new Error('Source is already loaded as a TIFF buffer.');
-
+        const logLevel = options.logLevel ? options.logLevel : {};
+        
         const origBuffer = await getResourceBuffer(this.source as string | URL);
 
         const pyramidBuffer = await sharp(origBuffer).tiff({
@@ -242,7 +245,7 @@ export class Art {
 
         if (options?.saveFile) {
             saveImage(options.outputDir,`${this.sourceName}.tiff`, pyramidBuffer);
-            console.log('Wrote pyramid TIFF to temp directory.');
+            if (logLevel !== 'none') console.log('Wrote pyramid TIFF to temp directory.');
         }
 
         return pyramidBuffer;

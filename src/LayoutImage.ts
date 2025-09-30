@@ -1,7 +1,8 @@
 import { Art, Layout } from "./gallery-image.js";
-import { existsSync, rmSync, mkdirSync } from "fs";
+import { existsSync, rmSync, mkdirSync, createWriteStream } from "fs";
 import sharp from "sharp";
 import { cleanTrailingSlash } from "./Util.js";
+import { Console, log } from "console";
 
 type ArtBlock = {
     input: Buffer;
@@ -46,6 +47,14 @@ export type GenerateImageOptions = {
      * 
      */
     outputType?: 'tif' | 'tiff' | 'dzi' | 'iiif';
+    /**
+     * 
+     */
+    logLevel?: 'none' | 'standard' | 'verbose';
+    /**
+     * 
+     */
+    sharpOptions?: any;
 }
 
 export class LayoutImage {
@@ -65,6 +74,14 @@ export class LayoutImage {
         if (!options.outputType) throw new Error('Must provide output type.');
         if (!options.outputDir) throw new Error('Must provide output directory.');
         if (!options.saveFile) throw new Error('saveFile must be true, generating an image will always save a file.');
+        const logLevel = options.logLevel ? options.logLevel : 'standard';
+
+        if (logLevel === 'verbose') {
+            const logOutput = createWriteStream(`${options.outputDir}/${this.layout.name}-${Date.now()}.log`, {flags: 'a'});
+            const logger = new Console(logOutput, logOutput);
+            console.log = logger.log;
+            console.error = logger.error;
+        }
 
         const noteImageSize = this.layout.noteImageSize;
 
@@ -100,11 +117,11 @@ export class LayoutImage {
                     blocks.push(artBlock);
 
                     totalDone++;
-                    console.log(`[${totalDone}/${totalEstimate}] ${art.sourceName} fetched...`);
+                    if (logLevel !== 'none') console.log(`[${totalDone}/${totalEstimate}] ${art.sourceName} fetched...`);
                 }
                 catch (e) {
                     totalDone++;
-                    console.error(e);
+                    if (logLevel !== 'none') console.error(e);
                 }
             });
         })
@@ -117,8 +134,10 @@ export class LayoutImage {
                     resolve(totalDone);
                 };
             }, 100);
-        })
-        console.log(`Loaded ${totalDone} images. Stitching...`);
+        });
+        if (logLevel !== 'none') console.log(`Loaded ${totalDone} images. Stitching...`);
+
+        const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
 
         // Generate large blank image in temp folder
         this.buffer = await sharp({
@@ -127,7 +146,8 @@ export class LayoutImage {
                 height:noteImageSize*this.layout.numRows,
                 channels: 4,
                 background: { r: 48, g: 48, b: 48, alpha: 1 } // #303030 - same as site background
-            }
+            },
+            ...sharpOptions
         }).composite(blocks).tiff({
             quality:100
         }).toBuffer();
@@ -145,8 +165,7 @@ export class LayoutImage {
                 await this._dzi(options);
                 break;
         }
-
-        console.log(`Pattern fully stitched. File(s) saved to ${options.outputDir}.`);
+        if (logLevel !== 'none') console.log(`Pattern fully stitched. File(s) saved to ${options.outputDir}.`);
         return this;
     };
 
@@ -154,8 +173,8 @@ export class LayoutImage {
 
         const dirName = cleanTrailingSlash(options.outputDir)
         
-        let minimumTileSize = this.layout.noteImageSize;
-        while (minimumTileSize % 2 == 0 && minimumTileSize >= 512) minimumTileSize /= 2;
+        let minimumTileSize = this.layout.noteImageSize - (this.layout.noteImageSize % 16);
+        while (minimumTileSize % 16 == 0 && minimumTileSize > 256) minimumTileSize /= 2;
 
         await sharp(this.buffer).tiff({
             pyramid:true,
