@@ -92,8 +92,9 @@ export class LayoutImage {
 
         const blocks: ArtBlock[] = [];
 
-        let x=0, y=0;
+        let y=0;
         for (const row of this.layout.array) {
+            let x = 0;
             for (const artObject of row) {
                 // Every 10 times this runs is approx. 45s
                 try {
@@ -114,7 +115,7 @@ export class LayoutImage {
                     }
 
                     blocks.push(artBlock);
-                    if (logLevel !== 'none') console.log(`[${totalDone}/${totalCount}] ${art.sourceName} fetched...`);
+                    if (logLevel !== 'none') console.log(`[${totalDone+1}/${totalCount}] ${art.sourceName} fetched...`);
                 }
                 catch (e) {
                     if (logLevel !== 'none') console.error(e);

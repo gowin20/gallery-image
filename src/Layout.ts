@@ -200,7 +200,47 @@ export class Layout {
 
         return;
     }
-    
+
+    toJson(): DbLayoutObject {
+        const idArray = this.array.map(row => row.map(art => art._id));
+        //if (typeof this.image !== 'string') throw new Error('Cannot cast layout to JSON that contains an image subclass.');
+        return {
+            _id:this._id,
+            name: this.name,
+            noteImageSize:this.noteImageSize,
+            numRows:this.numRows,
+            numCols:this.numCols,
+            array: idArray,
+            image: '' // URL of image
+        };
+    }
+
+    async generateImage(options: GenerateLayoutImageOptions): Promise<void> {
+
+        if (this.image) throw new Error('Image already exists. Please pass `overwrite: true` to overwrite existing image.');
+        if (!options || !options.outputType) throw new Error('Must specify an output file type.');
+        console.log('Generating layout image...');
+
+        this.image = new LayoutImage(this);
+
+        // Generate image using subclass, potentially save files to disk
+        await this.image.generate(options);
+
+        // Save layout JSON to disk
+        if (options.saveFile) {
+            fs.writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.name}-manifest.json`, JSON.stringify(this.toJson()));
+            console.log(`Saved ${this.name} as a layout.`);
+        }
+    }
+
+    async insert() {
+        throw new Error('Method \'insert()\' must be implemented.');
+    }
+
+    async patchImage() {
+        // TODO implement this: patch a single image to a position within an existing layout
+    }
+   
     /**
      * Generates a random pattern of notes based on input list
      * @param options 
@@ -254,59 +294,8 @@ export class Layout {
         console.log(`Width:${pattern[0].length}\nHeight: ${pattern.length}`);
         return pattern;
     }
-
-    toJson(): LayoutObject {
-        //if (typeof this.image !== 'string') throw new Error('Cannot cast layout to JSON that contains an image subclass.');
-        return {
-            _id:this._id,
-            name: this.name,
-            noteImageSize:this.noteImageSize,
-            numRows:this.numRows,
-            numCols:this.numCols,
-            array: this.array,
-            image: ''//this.image
-        };
-    }
-
-    async generateImage(options: GenerateLayoutImageOptions): Promise<void> {
-
-        if (this.image) throw new Error('Image already exists. Please pass `overwrite: true` to overwrite existing image.');
-        if (!options || !options.outputType) throw new Error('Must specify an output file type.');
-        console.log('Generating layout image...');
-
-        this.image = new LayoutImage(this);
-
-        // Generate image using subclass, potentially save files to disk
-        await this.image.generate(options);
-
-        // Save layout JSON to disk
-        if (options.saveFile) {
-            fs.writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.name}-manifest.json`, JSON.stringify(this.toJson()));
-            console.log(`Saved ${this.name} as a layout.`);
-        }
-    }
-
-    async insert() {
-        throw new Error('Method \'insert()\' must be implemented.');
-    }
-
-    async patchImage() {
-        // 1 implement this: uploading a single note to an existing layout
-        // will need to implement 'DZI' class 'generate' and 'update' methods
-    }
-
-    async uploadLayout() {
-        // TODO
-    }
-    async saveFiles() {
-        //TODO
-    }
-    async startGeneration() {
-        //TODO
-    }
-
     // creates an array filled with random notes based on a template
-    randomFromTemplate(template: ArtId[][]) {
+    _randomFromTemplate(template: ArtId[][]) {
         /**
          * 0 0 1
          * 1 1 0
@@ -315,4 +304,5 @@ export class Layout {
 
         // TODO
     }
+
 }

@@ -45,6 +45,27 @@ export interface OldArtObject {
     location?: string | null;
 }
 
+export interface DbArtObject {
+    /**
+     * Database ID
+     */
+    _id: string;
+    /**
+     * Original image: full resolution, preferably .tiff
+     */
+    source: URL | string;
+    /**
+     * Thumbnail versions of the image in various resolutions.
+     */
+    thumbnails: {
+        [_:`${number}`]: URL | string;
+    };
+    /**
+     * Image properties and metadata
+     */
+    metadata: ArtMetadata;
+}
+
 export interface ArtObject {
     /**
      * Database ID
@@ -165,13 +186,16 @@ export class Art {
         return this;
     }
 
-    toJson(): ArtObject {
-        if (typeof this.source === 'object' || Object.keys(this.thumbnails).map(thumbnail => typeof this.thumbnails[thumbnail] === 'object')) throw new Error('Cannot convert to JSON: Object contains unsaved buffers');
+    toJson(): DbArtObject {
+        //if (typeof this.source === 'object' || Object.keys(this.thumbnails).map(thumbnail => typeof this.thumbnails[thumbnail] === 'object')) throw new Error('Cannot convert to JSON: Object contains unsaved buffers');
         // TODO save all thumbnails and orig first!
-        
+        if (this.source instanceof Buffer) throw new Error('Cannot convert to JSON: Source is a buffer.');
+        Object.keys(this.thumbnails).forEach(thumbnail => {
+            if (this.thumbnails[thumbnail] instanceof Buffer) throw new Error(`Cannot convert to JSON: Thumbnail ${thumbnail} is a buffer.`);
+        })
         return {
             _id: this._id,
-            source: this.source,
+            source: this.source as string | URL,
             thumbnails: this.thumbnails as {[_:`${number}`]: string | URL},
             metadata: this.metadata
         }
