@@ -87,9 +87,7 @@ export class LayoutImage {
 
         console.log('Beginning stitched image generation...');
 
-        const totalEstimate = this.layout.numRows * this.layout.numCols;
         let totalCount = 0, totalDone = 0;
-
         for (const row of this.layout.array) for (const item of row) totalCount++;
 
         const blocks: ArtBlock[] = [];
@@ -117,13 +115,15 @@ export class LayoutImage {
                     blocks.push(artBlock);
 
                     totalDone++;
-                    if (logLevel !== 'none') console.log(`[${totalDone}/${totalEstimate}] ${art.sourceName} fetched...`);
+                    if (logLevel !== 'none') console.log(`[${totalDone}/${totalCount}] ${art.sourceName} fetched...`);
                 }
                 catch (e) {
                     totalDone++;
                     if (logLevel !== 'none') console.error(e);
                 }
             });
+
+            setTimeout(() => {}, 10000);
         })
 
         // Wait until all images are processed
