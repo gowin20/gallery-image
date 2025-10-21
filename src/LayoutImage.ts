@@ -1,8 +1,8 @@
 import { Art, Layout } from "./gallery-image.js";
 import { existsSync, rmSync, mkdirSync, createWriteStream } from "fs";
-import sharp from "sharp";
+import sharp from "../lib/sharp/lib/index.js";
 import { cleanTrailingSlash } from "./Util.js";
-import { Console, log } from "console";
+import { Console } from "console";
 
 type ArtBlock = {
     input: Buffer;
