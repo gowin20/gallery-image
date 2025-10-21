@@ -239,7 +239,7 @@ export class Art {
 
         let origBuffer: Buffer;
         if (this.source instanceof Buffer) origBuffer = this.source;
-        else origBuffer = await getResourceBuffer(this.source as string | URL );
+        else origBuffer = await getResourceBuffer(this.source as string);
 
         // Create thumbnail and add to thumbnail object
         const thumbnailBuffer = await sharp(origBuffer).resize({width:thumbnailSize}).jpeg().toBuffer();
@@ -259,7 +259,7 @@ export class Art {
         if (this.source instanceof Buffer) throw new Error('Source is already loaded as a TIFF buffer.');
         const logLevel = options.logLevel ? options.logLevel : {};
         
-        const origBuffer = await getResourceBuffer(this.source as string | URL);
+        const origBuffer = await getResourceBuffer(this.source as string);
 
         const pyramidBuffer = await sharp(origBuffer).tiff({
             pyramid: true,
