@@ -1,0 +1,3 @@
+[submodule "lib/sharp"]
+	path = lib/sharp
+	url = https://github.com/gowin20/sharp
