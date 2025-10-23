@@ -5,6 +5,12 @@ import { writeFileSync, readFileSync } from "fs";
 const urlRegex = /^(http|https):\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?$/;
 const httpRegex = /^(http|https):\/\/*/;
 
+export const minimumTileSize = (widthOrHeight:number): number => {
+    let minimumTileSize = widthOrHeight - (widthOrHeight % 16);
+    while (minimumTileSize % 16 == 0 && minimumTileSize > 256) minimumTileSize /= 2;
+    return minimumTileSize;
+}
+
 export const getResourceBuffer = async (filePathOrUrl: string | URL): Promise<Buffer> => {
 
     let imageBuffer: Buffer;
@@ -12,7 +18,6 @@ export const getResourceBuffer = async (filePathOrUrl: string | URL): Promise<Bu
     if (filePathOrUrl instanceof URL || urlRegex.test(filePathOrUrl) || httpRegex.test(filePathOrUrl) ) {
         console.log('Input is URL 4',filePathOrUrl);
 
-        console.log(urlRegex)
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
 

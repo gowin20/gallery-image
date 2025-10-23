@@ -62,9 +62,9 @@ export interface LayoutObject {
      */
     numCols: number;
     /**
-     * All of the art in this layout uses a consistent image size.
+     * All of the art in this layout uses a consistent image size. Thumbnails are indexed by WIDTH
      */
-    noteImageSize: number;
+    thumbnailSize: number;
 }
 
 
@@ -80,7 +80,7 @@ type LayoutOptions = {
     /**
      * Required, size of each image in the layout. TODO DETERMINE THIS DYNAMICALLY FROM ART PROPERTIES
      */
-    noteImageSize?: number;
+    thumbnailSize?: number;
 }
 
 type GenerateLayoutImageOptions = GenerateImageOptions & {
@@ -136,7 +136,7 @@ export class Layout {
     /**
      * All of the art in this layout uses a consistent image size.
      */
-    noteImageSize: number;
+    thumbnailSize: number;
 
     constructor(options?: LayoutOptions | LayoutObject) {
         // LayoutObject passed directly
@@ -149,7 +149,7 @@ export class Layout {
             this.image = layoutObj.image;
             this.numCols = layoutObj.numCols;
             this.numRows = layoutObj.numRows;
-            this.noteImageSize = layoutObj.noteImageSize;
+            this.thumbnailSize = layoutObj.thumbnailSize;
         }
         // LayoutOptions passed
         else {
@@ -165,7 +165,7 @@ export class Layout {
         }
         else if (!this.name) this.name = options.name;
 
-        this.noteImageSize = options.noteImageSize || 288;
+        this.thumbnailSize = options.thumbnailSize || 288;
 
         if (options.array) { 
             // Use provided 2D array of art
@@ -201,18 +201,31 @@ export class Layout {
         return;
     }
 
-    toJson(): DbLayoutObject {
+    toJson(db?:Boolean): LayoutObject | DbLayoutObject {
         const idArray = this.array.map(row => row.map(art => art._id));
         //if (typeof this.image !== 'string') throw new Error('Cannot cast layout to JSON that contains an image subclass.');
-        return {
-            _id:this._id,
-            name: this.name,
-            noteImageSize:this.noteImageSize,
-            numRows:this.numRows,
-            numCols:this.numCols,
-            array: idArray,
-            image: '' // URL of image
-        };
+        if (db) {
+            return {
+                _id:this._id,
+                name: this.name,
+                noteImageSize:this.thumbnailSize,
+                numRows:this.numRows,
+                numCols:this.numCols,
+                array: idArray,
+                image: '' // URL of image
+            } as DbLayoutObject;
+        }
+        else {
+            return {
+                _id:this._id,
+                name: this.name,
+                thumbnailSize:this.thumbnailSize,
+                numRows:this.numRows,
+                numCols:this.numCols,
+                array: this.array,
+                image: '' // URL of image
+            } as LayoutObject;
+        }
     }
 
     async generateImage(options: GenerateLayoutImageOptions): Promise<void> {

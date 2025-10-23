@@ -3,6 +3,7 @@ import { existsSync, rmSync, mkdirSync, createWriteStream } from "fs";
 import sharp from "../lib/sharp/lib/index.js";
 import { cleanTrailingSlash } from "./Util.js";
 import { Console } from "console";
+import { imageSize } from 'image-size';
 
 type ArtBlock = {
     input: Buffer;
@@ -62,6 +63,7 @@ export class LayoutImage {
     layout: Layout;
     name: string;
     buffer?: Buffer;
+    artDimensions?: {width:number,height:number,orientation:number};
 
     constructor(layout: Layout) {
 
@@ -82,8 +84,20 @@ export class LayoutImage {
             console.log = logger.log;
             console.error = logger.error;
         }
+        // TODO determine width and height of one input image. Assume all are same size
+        const thumbnailSize = this.layout.thumbnailSize;
 
-        const noteImageSize = this.layout.noteImageSize;
+        const sampleArt = new Art(this.layout.array[0][0]);
+
+        const sampleBuffer = await sampleArt.loadOrGenerateThumbnail(thumbnailSize);
+        const dimensions = imageSize(sampleBuffer);
+        this.artDimensions = {
+            width: dimensions.width,
+            height: dimensions.height,
+            orientation: dimensions.orientation
+        };
+
+        const imageWidth = dimensions.width, imageHeight = dimensions.height;
 
         console.log('Beginning stitched image generation...');
 
@@ -100,18 +114,12 @@ export class LayoutImage {
                 try {
                     const art = new Art(artObject);
 
-                    if (!art.thumbnailExists(noteImageSize)) {
-                        await art.generateThumbnail(noteImageSize, {
-                            saveFile: false
-                        });
-                    }
-
-                    const artBuffer = await art.loadThumbnail(noteImageSize);
+                    const artBuffer = await art.loadOrGenerateThumbnail(thumbnailSize);
 
                     const artBlock: ArtBlock = {
                         input: artBuffer,
-                        top:y*noteImageSize,
-                        left:x*noteImageSize
+                        top:y*imageHeight,
+                        left:x*imageWidth
                     }
 
                     blocks.push(artBlock);
@@ -142,8 +150,8 @@ export class LayoutImage {
         // Generate large blank image in temp folder
         this.buffer = await sharp({
             create: {
-                width:noteImageSize*this.layout.numCols,
-                height:noteImageSize*this.layout.numRows,
+                width:imageWidth * this.layout.numCols,
+                height:imageHeight * this.layout.numRows,
                 channels: 4,
                 background: { r: 48, g: 48, b: 48, alpha: 1 } // #303030 - same as site background
             },
@@ -174,14 +182,15 @@ export class LayoutImage {
         const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
         const dirName = cleanTrailingSlash(options.outputDir)
         
-        let minimumTileSize = this.layout.noteImageSize - (this.layout.noteImageSize % 16);
-        while (minimumTileSize % 16 == 0 && minimumTileSize > 256) minimumTileSize /= 2;
-
+        const totalWidth = this.layout.numCols * this.artDimensions.width, totalHeight = this.layout.numRows * this.artDimensions.height;;
+        const minimumTileWidth = totalWidth > 256 ? 256 : totalWidth - (totalWidth % 16);
+        const minimumTileHeight = totalHeight > 256 ? 256 : totalHeight - (totalHeight % 16);
+        
         await sharp(this.buffer, sharpOptions).tiff({
             pyramid:true,
             tile:true, // Not sure this flag matters since pyramid is true
-            tileWidth: minimumTileSize,
-            tileHeight: minimumTileSize,
+            tileWidth: minimumTileWidth,
+            tileHeight: minimumTileHeight,
         }).toFile(`${dirName}/${this.name}.tif`);
     }
 

@@ -211,6 +211,21 @@ export class Art {
     /*
     Returns thumbnail as a buffer
     */
+
+    // TODO support "orig" as thumbnailSize param, returns original image as buffer
+    async loadOrGenerateThumbnail(thumbnailSize: number): Promise<Buffer> {
+        let thumbnail: Buffer;
+        if (!this.thumbnailExists(thumbnailSize)) {
+            thumbnail = await this.generateThumbnail(thumbnailSize, {
+                saveFile: false
+            });
+        }
+        else {
+            thumbnail = await this.loadThumbnail(thumbnailSize);
+        }
+        return thumbnail;
+    }
+
     async loadThumbnail(thumbnailSize: number): Promise<Buffer> {
 
         if (!this.thumbnailExists(thumbnailSize)) throw new Error('Cannot load a thumbnail that doesn\'t exist');
@@ -242,7 +257,11 @@ export class Art {
         else origBuffer = await getResourceBuffer(this.source as string);
 
         // Create thumbnail and add to thumbnail object
-        const thumbnailBuffer = await sharp(origBuffer).resize({width:thumbnailSize}).jpeg().toBuffer();
+        const thumbnailBuffer = await sharp(origBuffer)
+                                        .resize({width:thumbnailSize})
+                                        .withMetadata()
+                                        .jpeg()
+                                        .toBuffer();
         this.thumbnails[thumbnailSize] = thumbnailBuffer;
         
 
