@@ -1,6 +1,6 @@
 import { getFileName, getResourceBuffer, saveImage } from "./Util.js";
 import type { GenerateImageOptions, ImageId } from "./LayoutImage.js"
-import sharp from "../lib/sharp/lib/index.js";
+import sharp from "sharp";
 
 export type ArtistId = string;
 

@@ -1,6 +1,6 @@
 import { Art, Layout } from "./gallery-image.js";
 import { existsSync, rmSync, mkdirSync, createWriteStream } from "fs";
-import sharp from "../lib/sharp/lib/index.js";
+import sharp from "sharp";
 import { cleanTrailingSlash } from "./Util.js";
 import { Console } from "console";
 import { imageSize } from 'image-size';
