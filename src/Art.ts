@@ -1,7 +1,7 @@
 import { getFileName } from "./Util.js";
 import type { ImageId } from "./LayoutImage.js"
-import { ImageResource, GenerateImageOptions } from "./ImageResource.js";
-
+import { ImageResource, GenerateImageOptions, ImageDimensions } from "./ImageResource.js";
+import type { Canvas, Manifest } from '@iiif/presentation-3';
 
 export type ArtistId = string;
 
@@ -119,11 +119,7 @@ export class Art {
 
     source: ImageResource;
     sourceName: string;
-    dimensions: {
-        width:number,
-        height:number,
-        orientation:number
-    };
+    dimensions: ImageDimensions;
 
     thumbnails: {
         [_:`${number}`]: ImageResource;
@@ -252,4 +248,7 @@ export class Art {
         }
     }
 
+    // toIiifCanvas(): Canvas {
+
+    // }
 }

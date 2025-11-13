@@ -1,7 +1,8 @@
 import fetch from "node-fetch";
-import { parse } from "path";
+import { parse, isAbsolute, dirname, resolve } from "path";
 import { createWriteStream, readFileSync } from "fs";
 import { Console } from "console";
+import { fileURLToPath } from "url";
 
 const urlRegex = /^(http|https):\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?$/;
 const httpRegex = /^(http|https):\/\/*/;
@@ -12,12 +13,26 @@ export const minimumTileSize = (widthOrHeight:number): number => {
     return minimumTileSize;
 }
 
+export const validatePath = (filePathOrUrl: string | URL): string => {
+
+    if (filePathOrUrl instanceof URL) return filePathOrUrl.href;
+    else if (urlRegex.test(filePathOrUrl) || httpRegex.test(filePathOrUrl)) return filePathOrUrl;
+    else {
+        // path points to a local file or directory
+        if (isAbsolute(filePathOrUrl)) return filePathOrUrl;
+        else {
+
+            return resolve(filePathOrUrl);
+            //return absolutePath.href;
+        }
+    }
+}
+
 export const getResourceBuffer = async (filePathOrUrl: string | URL): Promise<Buffer> => {
 
     let imageBuffer: Buffer;
     // If URL
     if (filePathOrUrl instanceof URL || urlRegex.test(filePathOrUrl) || httpRegex.test(filePathOrUrl) ) {
-        console.log('Input is URL 4',filePathOrUrl);
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);

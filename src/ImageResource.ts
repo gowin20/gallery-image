@@ -1,9 +1,10 @@
-import { getResourceBuffer, cleanTrailingSlash, setupLogging, log } from "./Util.js";
+import { getResourceBuffer, cleanTrailingSlash, setupLogging, log, validatePath } from "./Util.js";
 import { Art } from "./gallery-image.js";
 import sharp from "sharp";
 import { writeFileSync, createWriteStream, existsSync, rmSync, mkdirSync } from "fs";
 import { Console } from "console";
 import {imageSize} from "image-size";
+import type { ContentResource } from "@iiif/presentation-3";
 
 /**
  * Base options for generating all kinds of images
@@ -39,7 +40,11 @@ export type GenerateImageOptions = GenerateImageBaseOptions & {
 }
 
     // TODO support "orig" as thumbnailSize param, returns original image as buffer
-
+export type ImageDimensions = {
+    width:number,
+    height:number,
+    orientation:number
+};
 
 export class ImageResource {
 
@@ -55,8 +60,7 @@ export class ImageResource {
      */
     buffer?: Buffer;
 
-    width: number;
-    height: number;
+    dimensions: ImageDimensions;
 
     constructor(options: {
         id: URL | string;
@@ -158,17 +162,24 @@ export class ImageResource {
         return newImage;
     }
 
+    async getDimensions(): Promise<ImageDimensions> {
+
+        const imageBuffer = await this.loadResource();
+
+        const dims = imageSize(imageBuffer);
+        this.dimensions = {width:dims.width, height:dims.height, orientation:dims.orientation}
+        return this.dimensions;
+    }
+
     async _tiffWithPyramids(options: GenerateImageOptions): Promise<ImageResource> {
 
         const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
 
         const imageBuffer = await this.loadResource();
 
-        const dims = imageSize(imageBuffer);
-        this.width = dims.width, this.height = dims.height;
 
-        const minimumTileWidth = this.width > 256 ? 256 : this.width - (this.width % 16);
-        const minimumTileHeight = this.height > 256 ? 256 : this.height - (this.height % 16);
+        const minimumTileWidth = this.dimensions.width > 256 ? 256 : this.dimensions.width - (this.dimensions.width % 16);
+        const minimumTileHeight = this.dimensions.height > 256 ? 256 : this.dimensions.height - (this.dimensions.height % 16);
         
         const tiffBuffer = await sharp(imageBuffer, sharpOptions).tiff({
             pyramid:true,
@@ -240,4 +251,46 @@ export class ImageResource {
         });
     }
 
+    getId(): string {
+        if (this.id instanceof URL) {
+            return this.id.href;
+        }
+        else return this.id;
+    }
+
+    getMimeType(): string {
+
+        const id = this.getId();
+
+        const lastDotIndex = id.lastIndexOf('.');
+        if (lastDotIndex === -1) throw new Error('ID is not a valid path to an image resource.');
+
+        let ext = id.substring(lastDotIndex+1);
+
+        if (ext === 'jpg') ext = 'jpeg';
+        if (ext === 'tif') ext = 'tiff';
+
+        return `image/${ext}`;
+    }
+
+    async toIiifContentResource(): Promise<ContentResource> {
+
+        if (!this.dimensions) await this.getDimensions();
+
+        const iiifContentResource: ContentResource = {
+            id: validatePath(this.getId()),
+            type:"Image",
+            format: this.getMimeType(),
+            width: this.dimensions.width,
+            height: this.dimensions.height,
+            language:'en'
+        }
+
+        return iiifContentResource;
+    }
+
+    async createIiifImageService(): Promise<void> {
+
+
+    }
 }
