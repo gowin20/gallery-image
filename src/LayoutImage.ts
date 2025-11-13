@@ -1,8 +1,7 @@
 import { Art, Layout } from "./gallery-image.js";
-import { existsSync, rmSync, mkdirSync, createWriteStream } from "fs";
+import { existsSync, rmSync, mkdirSync } from "fs";
 import sharp from "sharp";
-import { cleanTrailingSlash } from "./Util.js";
-import { Console } from "console";
+import { cleanTrailingSlash, setupLogging, log, error } from "./Util.js";
 import { imageSize } from 'image-size';
 import { GenerateImageOptions } from "./ImageResource.js";
 
@@ -50,18 +49,8 @@ export class LayoutImage {
         this.name = `${this.layout.name}-stitch`;
     };
 
-    async generate (options: GenerateImageOptions): Promise<LayoutImage> {
-        if (!options.outputType) throw new Error('Must provide output type.');
-        if (!options.outputDir) throw new Error('Must provide output directory.');
-        if (!options.saveFile) throw new Error('saveFile must be true, generating an image will always save a file.');
-        const logLevel = options.logLevel ? options.logLevel : 'standard';
+    async createLayoutImage (options: GenerateImageOptions): Promise<this> {
 
-        if (logLevel === 'verbose') {
-            const logOutput = createWriteStream(`${options.outputDir}/${this.layout.name}-${Date.now()}.log`, {flags: 'a'});
-            const logger = new Console(logOutput, logOutput);
-            console.log = logger.log;
-            console.error = logger.error;
-        }
         // TODO determine width and height of one input image. Assume all are same size
         const thumbnailSize = this.layout.thumbnailSize;
 
@@ -77,7 +66,7 @@ export class LayoutImage {
 
         const imageWidth = dimensions.width, imageHeight = dimensions.height;
 
-        console.log('Beginning stitched image generation...');
+        log('Beginning stitched image generation...');
 
         let totalCount = 0, totalDone = 0;
         for (const row of this.layout.array) for (const item of row) totalCount++;
@@ -101,10 +90,10 @@ export class LayoutImage {
                     }
 
                     blocks.push(artBlock);
-                    if (logLevel !== 'none') console.log(`[${totalDone+1}/${totalCount}] ${art.sourceName} fetched...`);
+                    log(`[${totalDone+1}/${totalCount}] ${art.sourceName} fetched...`);
                 }
                 catch (e) {
-                    if (logLevel !== 'none') console.error(e);
+                    error(e);
                 }
                 totalDone++;
                 x++;
@@ -121,7 +110,7 @@ export class LayoutImage {
                 };
             }, 100);
         });
-        if (logLevel !== 'none') console.log(`Loaded ${totalDone} images. Stitching...`);
+        log(`Loaded ${totalDone} images. Stitching...`);
 
         const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
 
@@ -137,7 +126,26 @@ export class LayoutImage {
         }).composite(blocks).tiff({
             quality:100
         }).toBuffer();
+        log('Layout fully assembled and saved as buffer.');
+        return this;
+    }
 
+    async generate (options: GenerateImageOptions): Promise<LayoutImage> {
+        if (!options.outputType) throw new Error('Must provide output type.');
+        if (!options.outputDir) throw new Error('Must provide output directory.');
+        if (!options.saveFile) throw new Error('saveFile must be true, generating a layout image will always save a file.');
+
+        // Debug logging
+        const logLevel = options.logLevel ? options.logLevel : 'standard';
+        setupLogging(logLevel,`${options.outputDir}/${this.layout.name}-generate`);
+
+
+        if (!this.buffer) {
+            log('Layout image needs to be assembled. Starting assembly process...');
+            await this.createLayoutImage(options);
+        }
+
+        
         // Generate and save image
         switch (options.outputType) {
             case 'tif':
@@ -151,7 +159,7 @@ export class LayoutImage {
                 await this._dzi(options);
                 break;
         }
-        if (logLevel !== 'none') console.log(`Pattern fully stitched. File(s) saved to ${options.outputDir}.`);
+        log(`Generation complete. File(s) saved to ${options.outputDir}.`);
         return this;
     };
 

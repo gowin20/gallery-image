@@ -1,7 +1,9 @@
-import { getResourceBuffer, cleanTrailingSlash } from "./Util.js";
+import { getResourceBuffer, cleanTrailingSlash, setupLogging, log } from "./Util.js";
 import { Art } from "./gallery-image.js";
 import sharp from "sharp";
-import { writeFileSync } from "fs";
+import { writeFileSync, createWriteStream, existsSync, rmSync, mkdirSync } from "fs";
+import { Console } from "console";
+import {imageSize} from "image-size";
 
 /**
  * Base options for generating all kinds of images
@@ -53,7 +55,8 @@ export class ImageResource {
      */
     buffer?: Buffer;
 
-    service?: any;
+    width: number;
+    height: number;
 
     constructor(options: {
         id: URL | string;
@@ -127,24 +130,60 @@ export class ImageResource {
         return thumbnailResource;
     }
 
-    async createSourcePyramid(options: GenerateImageOptions): Promise<ImageResource> {
-        const logLevel = options.logLevel ? options.logLevel : {};
+    /**
+     * Generates a new image based on this image resource, and returns it as a new image resource
+     * @param options 
+     */
+    async generateImage(options: GenerateImageOptions): Promise<ImageResource> {
+        if (!options.outputType) throw new Error('Output type is required for image generation.');
+
+        const logLevel = options.logLevel ? options.logLevel : 'standard';
+        setupLogging(logLevel, `${options.outputDir}/${this.partOf.sourceName}-generate`);
+
+        let newImage: ImageResource;
+        // Generate and save image
+        switch (options.outputType) {
+            case 'tif':
+            case 'tiff':
+                newImage = await this._tiffWithPyramids(options);
+                break;
+            case 'iiif':
+                newImage = await this._iiif(options);
+                break;
+            case 'dzi':
+                newImage = await this._dzi(options);
+                break;
+        }
+        log(`Image transformed successfully. ${options.saveFile ? `File(s) saved to ${options.outputDir}.` : ''}`);
+        return newImage;
+    }
+
+    async _tiffWithPyramids(options: GenerateImageOptions): Promise<ImageResource> {
+
+        const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
+
+        const imageBuffer = await this.loadResource();
+
+        const dims = imageSize(imageBuffer);
+        this.width = dims.width, this.height = dims.height;
+
+        const minimumTileWidth = this.width > 256 ? 256 : this.width - (this.width % 16);
+        const minimumTileHeight = this.height > 256 ? 256 : this.height - (this.height % 16);
         
-        const origBuffer = await this.loadResource();
-
-        const pyramidBuffer = await sharp(origBuffer).tiff({
-            pyramid: true,
-            tile: true
+        const tiffBuffer = await sharp(imageBuffer, sharpOptions).tiff({
+            pyramid:true,
+            tile:true, // Not sure this flag matters since pyramid is true
+            tileWidth: minimumTileWidth,
+            tileHeight: minimumTileHeight,
         }).toBuffer();
-
-
+    
         let tiffId: string;
 
         if (options?.saveFile) {
             const path = `${cleanTrailingSlash(options.outputDir)}/${this.partOf.sourceName}.tiff`;
             tiffId = path;
-            writeFileSync(path, pyramidBuffer);
-            if (logLevel !== 'none') console.log('Wrote pyramid TIFF to temp directory.');
+            writeFileSync(path, tiffBuffer);
+            log('Wrote pyramid TIFF to temp directory.');
         }
         else {
             tiffId = `${this.partOf.sourceName}.tiff`;
@@ -153,7 +192,52 @@ export class ImageResource {
         return new ImageResource({
             id: tiffId,
             art: this.partOf,
-            buffer: pyramidBuffer
+            buffer: tiffBuffer
         });
     }
+
+    async _dzi(options: GenerateImageOptions): Promise<ImageResource> {
+        if (!options.saveFile) throw new Error('Setting output to `dzi` requires files saved to disk. Set `saveFile: true.`')
+
+        const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
+        const dirName = `${cleanTrailingSlash(options.outputDir)}/${this.partOf.sourceName}-dzi/`;
+
+        if (existsSync(dirName)) rmSync(dirName, {recursive:true});
+        mkdirSync(dirName);
+
+        const imageBuffer = await this.loadResource();
+
+        await sharp(imageBuffer, sharpOptions).tile({
+            layout:'dz',
+        }).toFile(dirName);
+
+        return new ImageResource({
+            id: dirName,
+            art: this.partOf
+        })
+    }
+
+    async _iiif(options: GenerateImageOptions): Promise<ImageResource> {
+        if (!options.saveFile) throw new Error('Setting output to `iiif` requires files saved to disk. Set `saveFile: true.`')
+        if (!options.id) throw new Error('`id` property is required when generating IIIF output.')
+
+        const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
+        const dirName = `${cleanTrailingSlash(options.outputDir)}/${this.partOf.sourceName}-iiif/`;
+
+        if (existsSync(dirName)) rmSync(dirName, {recursive:true});
+        mkdirSync(dirName);
+
+        const imageBuffer = await this.loadResource();
+
+        await sharp(imageBuffer, sharpOptions).tile({
+            layout:'iiif',
+            id:cleanTrailingSlash(options.id)
+        }).toFile(dirName);
+
+        return new ImageResource({
+            id: options.id, // This doesn't accurately reflect the directory
+            art: this.partOf
+        });
+    }
+
 }

@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import { parse } from "path";
-import { writeFileSync, readFileSync } from "fs";
+import { createWriteStream, readFileSync } from "fs";
+import { Console } from "console";
 
 const urlRegex = /^(http|https):\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?$/;
 const httpRegex = /^(http|https):\/\/*/;
@@ -60,4 +61,23 @@ export const getFileName = (filePathOrUrl: string | URL): string => {
 
 export const cleanTrailingSlash = (path) => {
     return path.replace(/([^/])\/+$/, '$1');
+}
+
+
+let logLevel: string;
+export const setupLogging = (level: string, jobName: string) => {
+    logLevel = level;
+    if (logLevel === 'verbose') {
+        const logOutput = createWriteStream(`${jobName}-${Date.now()}.log`, {flags: 'a'});
+        const logger = new Console(logOutput, logOutput);
+        console.log = logger.log;
+        console.error = logger.error;
+    }
+}
+
+export const log = (message:string) => {
+    if (logLevel !== 'none') console.log(message);
+}
+export const error = (error:Error) => {
+    if (logLevel !== 'none') console.error(error);
 }

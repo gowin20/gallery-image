@@ -247,4 +247,8 @@ export class Art {
 
         return thumbnailResource;
     }
+
+    async generateImage(options: GenerateImageOptions): Promise<ImageResource> {
+        return await this.source.generateImage(options);
+    }
 }
