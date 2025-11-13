@@ -248,7 +248,51 @@ export class Art {
         }
     }
 
-    // toIiifCanvas(): Canvas {
+    async toIiifCanvas(id: string): Promise<Canvas> {
 
-    // }
+        this.dimensions = await this.source.getDimensions();
+
+        const canvasId = id ? id : this.id;
+
+        const iiifCanvas: Canvas = {
+            id: `${canvasId}/canvas`,
+            type:"Canvas",
+            height:this.dimensions.height,
+            width:this.dimensions.width,
+            items: [
+                {
+                    id: `${canvasId}/annotationpage/0`,
+                    type:"AnnotationPage",
+                    items: [
+                        {
+                            id: `${canvasId}/annotation/0`,
+                            type:"Annotation",
+                            motivation:"Painting",
+                            body: await this.source.toIiifContentResource()
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        if (this.thumbnails) {
+            iiifCanvas.thumbnail = [];
+            for (const thumbnailSize of Object.keys(this.thumbnails)) {
+                const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource();
+                iiifCanvas.thumbnail.push(thumbnailContentResource)
+            }
+        }
+
+        if (this.metadata) {
+            iiifCanvas.metadata = [];
+            for (const metadataLabel of Object.keys(this.metadata)) {
+                iiifCanvas.metadata.push({
+                    "label": {"en":[metadataLabel.charAt(0).toUpperCase()+metadataLabel.slice(1)]},
+                    "value": {"en":[this.metadata[metadataLabel]]}
+                })
+            }
+        }
+
+        return iiifCanvas;
+    }
 }
