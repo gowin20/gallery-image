@@ -61,9 +61,3 @@ export const getFileName = (filePathOrUrl: string | URL): string => {
 export const cleanTrailingSlash = (path) => {
     return path.replace(/([^/])\/+$/, '$1');
 }
-
-export const saveImage = async (outputDir, fileName: string, buffer: Buffer) => {
-    if (!outputDir) throw new Error('Must provide a directory path with `outputDir` to save file.');
-
-    writeFileSync(`${cleanTrailingSlash(outputDir)}/${fileName}`, buffer);
-}

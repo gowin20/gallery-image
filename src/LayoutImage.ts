@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { cleanTrailingSlash } from "./Util.js";
 import { Console } from "console";
 import { imageSize } from 'image-size';
+import { GenerateImageOptions } from "./ImageResource.js";
 
 type ArtBlock = {
     input: Buffer;
@@ -33,29 +34,6 @@ export type DziImage = {
 
 export type StitchedImage = {
     Path: string;
-}
-
-export type GenerateImageOptions = {
-    /**
-     * Whether to save the output image as a file
-     */
-    saveFile: boolean;
-    /**
-     * Output directory
-     */
-    outputDir?: string;
-    /**
-     * 
-     */
-    outputType?: 'tif' | 'tiff' | 'dzi' | 'iiif';
-    /**
-     * 
-     */
-    logLevel?: 'none' | 'standard' | 'verbose';
-    /**
-     * 
-     */
-    sharpOptions?: any;
 }
 
 export class LayoutImage {
@@ -89,7 +67,7 @@ export class LayoutImage {
 
         const sampleArt = new Art(this.layout.array[0][0]);
 
-        const sampleBuffer = await sampleArt.loadOrGenerateThumbnail(thumbnailSize);
+        const sampleBuffer = await sampleArt.loadOrCreateThumbnail(thumbnailSize);
         const dimensions = imageSize(sampleBuffer);
         this.artDimensions = {
             width: dimensions.width,
@@ -114,7 +92,7 @@ export class LayoutImage {
                 try {
                     const art = new Art(artObject);
 
-                    const artBuffer = await art.loadOrGenerateThumbnail(thumbnailSize);
+                    const artBuffer = await art.loadOrCreateThumbnail(thumbnailSize);
 
                     const artBlock: ArtBlock = {
                         input: artBuffer,
@@ -196,13 +174,14 @@ export class LayoutImage {
 
     async _iiif(options: GenerateImageOptions): Promise<void> {
         const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
+        if (!options.id) throw new Error('ID is required when generating IIIF output.')
         const dirName = `${cleanTrailingSlash(options.outputDir)}/${this.name}/`;
 
         if (existsSync(dirName)) rmSync(dirName, {recursive:true});
         mkdirSync(dirName);
 
         await sharp(this.buffer, sharpOptions).tile({
-            layout:'iiif3',
+            layout:'iiif',
             id:dirName
         }).toFile(dirName);
     }

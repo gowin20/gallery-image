@@ -1,5 +1,6 @@
 import fs from 'fs';
-import { LayoutImage, GenerateImageOptions } from './LayoutImage.js';
+import { GenerateImageOptions } from './ImageResource.js';
+import { LayoutImage } from './LayoutImage.js';
 import { cleanTrailingSlash } from './Util.js';
 import type { ArtId, ArtObject } from './Art.js';
 
@@ -40,7 +41,7 @@ export interface LayoutObject {
     /**
      * Database ID
      */
-    _id: string;
+    id: string;
     /**
      * Name of layout
      */
@@ -83,14 +84,6 @@ type LayoutOptions = {
     thumbnailSize?: number;
 }
 
-type GenerateLayoutImageOptions = GenerateImageOptions & {
-    /**
-     * Whether to overwrite the existing image on file
-     */
-    overwrite?: boolean;
-}
-
-
 /*
 const createLayout;
 Creates a functional layout object of notes and images
@@ -112,7 +105,7 @@ export class Layout {
     /**
      * Database ID
      */
-    _id: string;
+    id: string;
     /**
      * Name of layout
      */
@@ -140,10 +133,10 @@ export class Layout {
 
     constructor(options?: LayoutOptions | LayoutObject) {
         // LayoutObject passed directly
-        if ((options as LayoutObject)._id) {
+        if ((options as LayoutObject).id) {
             const layoutObj = options as LayoutObject;
 
-            this._id = layoutObj._id;
+            this.id = layoutObj.id;
             this.name = layoutObj.name;
             this.array = layoutObj.array;
             this.image = layoutObj.image;
@@ -202,11 +195,11 @@ export class Layout {
     }
 
     toJson(db?:Boolean): LayoutObject | DbLayoutObject {
-        const idArray = this.array.map(row => row.map(art => art._id));
+        const idArray = this.array.map(row => row.map(art => art.id));
         //if (typeof this.image !== 'string') throw new Error('Cannot cast layout to JSON that contains an image subclass.');
         if (db) {
             return {
-                _id:this._id,
+                _id:this.id,
                 name: this.name,
                 noteImageSize:this.thumbnailSize,
                 numRows:this.numRows,
@@ -217,7 +210,7 @@ export class Layout {
         }
         else {
             return {
-                _id:this._id,
+                id:this.id,
                 name: this.name,
                 thumbnailSize:this.thumbnailSize,
                 numRows:this.numRows,
@@ -228,7 +221,12 @@ export class Layout {
         }
     }
 
-    async generateImage(options: GenerateLayoutImageOptions): Promise<void> {
+    async generateImage(options: GenerateImageOptions & {
+        /**
+         * Whether to overwrite the existing image on file
+         */
+        overwrite?: boolean;
+    }): Promise<void> {
 
         if (this.image) throw new Error('Image already exists. Please pass `overwrite: true` to overwrite existing image.');
         if (!options || !options.outputType) throw new Error('Must specify an output file type.');
@@ -260,7 +258,7 @@ export class Layout {
      * @returns 
      */
     _makeRandomPattern(options: {artList: ArtObject[], ratio: number}): ArtObject[][] {
-        if (this._id) throw new Error('Layout was initialized with an ID. Cannot make random pattern.')
+        if (this.id) throw new Error('Layout was initialized with an ID. Cannot make random pattern.')
         console.log('Creating random pattern...')
     
         if (!options.artList) throw new Error('No art provided to \'makeRandomPattern()\'');

@@ -20,9 +20,11 @@
   "main": "dist/src/gallery-image.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "esbuild gallery-image.ts --bundle --outfile=dist/out.js"
+    "build": "tsc",
+    "start": "nodemon tsc --watch src/"
   },
   "devDependencies": {
+    "@iiif/presentation-3": "^2.2.3",
     "@types/node": "^24.5.2",
     "esbuild": "^0.25.11",
     "node-addon-api": "^8.5.0",
