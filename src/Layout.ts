@@ -113,7 +113,7 @@ export class Layout {
     /**
      * ID of image representing layout
      */
-    image: string | URL | LayoutImage;
+    image: LayoutImage;
     /**
      * Array containing IDs of individual images
      */
@@ -139,7 +139,7 @@ export class Layout {
             this.id = layoutObj.id;
             this.name = layoutObj.name;
             this.array = layoutObj.array;
-            this.image = layoutObj.image;
+            //this.image = layoutObj.image;
             this.numCols = layoutObj.numCols;
             this.numRows = layoutObj.numRows;
             this.thumbnailSize = layoutObj.thumbnailSize;
@@ -235,7 +235,7 @@ export class Layout {
         this.image = new LayoutImage(this);
 
         // Generate image using subclass, potentially save files to disk
-        await this.image.generate(options);
+        await this.image.generateImage(options);
 
         // Save layout JSON to disk
         if (options.saveFile) {

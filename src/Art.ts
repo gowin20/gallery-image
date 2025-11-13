@@ -2,6 +2,7 @@ import { getFileName } from "./Util.js";
 import type { ImageId } from "./LayoutImage.js"
 import { ImageResource, GenerateImageOptions } from "./ImageResource.js";
 
+
 export type ArtistId = string;
 
 export interface OldArtObject {
@@ -112,9 +113,6 @@ export type ArtMetadata = {
 
 export type ArtId = string;
 
-const thumbnailName = (number: number) => number;
-
-
 export class Art {
 
     id?: ArtId;
@@ -122,9 +120,10 @@ export class Art {
     source: ImageResource;
     sourceName: string;
     dimensions: {
-        width: number;
-        height: number;
-    }
+        width:number,
+        height:number,
+        orientation:number
+    };
 
     thumbnails: {
         [_:`${number}`]: ImageResource;
@@ -136,11 +135,11 @@ export class Art {
 
         this.thumbnails = {}
         if (options.thumbnails) {
-            Object.keys(options.thumbnails).forEach(thumbnailId => {
-                const size = thumbnailId.match(/\d+/)[0];
-
+            Object.keys(options.thumbnails).forEach(thumbnailSize => {
+                const size = thumbnailSize.match(/\d+/)[0];
+                
                 this.thumbnails[size] = new ImageResource({
-                    id: thumbnailId,
+                    id: options.thumbnails[thumbnailSize],
                     art: this
                 });
             })
@@ -150,10 +149,15 @@ export class Art {
 
         if ((options as OldArtObject).orig) {
             this.fromOldArtObject(options as OldArtObject);
-            return;
         }
+        else {
+            const artObject = options as ArtObject;
+            this.setArtSource(artObject);
+            this.metadata = artObject.metadata ? artObject.metadata : {};
+        }
+    }
 
-        const artObject = options as ArtObject;
+    setArtSource(artObject: ArtObject): void {
         if (!artObject.source) throw new Error('No source specified for Art.');
 
         if (typeof artObject.source === 'string') {
@@ -179,8 +183,6 @@ export class Art {
                 buffer: artObject.source
             })
         }
-
-        this.metadata = artObject.metadata ? artObject.metadata : {};
     }
 
     fromOldArtObject(artObject: OldArtObject): this {
@@ -198,22 +200,6 @@ export class Art {
 
         return this;
     }
-
-    // toJson(): DbArtObject {
-    //     //if (typeof this.source === 'object' || Object.keys(this.thumbnails).map(thumbnail => typeof this.thumbnails[thumbnail] === 'object')) throw new Error('Cannot convert to JSON: Object contains unsaved buffers');
-    //     // TODO save all thumbnails and orig first!
-    //     if (this.source instanceof Buffer) throw new Error('Cannot convert to JSON: Source is a buffer.');
-    //     Object.keys(this.thumbnails).forEach(thumbnail => {
-    //         if (this.thumbnails[thumbnail] instanceof Buffer) throw new Error(`Cannot convert to JSON: Thumbnail ${thumbnail} is a buffer.`);
-    //     })
-    //     return {
-    //         id: this.id,
-    //         source: this.source as string | URL,
-    //         thumbnails: this.thumbnails as {[_:`${number}`]: string | URL},
-    //         metadata: this.metadata
-    //     }
-    // }
-
 
     thumbnailExists(thumbnailSize: number): boolean {
         return Object.keys(this.thumbnails).includes(String(thumbnailSize));
@@ -251,4 +237,19 @@ export class Art {
     async generateImage(options: GenerateImageOptions): Promise<ImageResource> {
         return await this.source.generateImage(options);
     }
+
+    toArtObject(): ArtObject {
+
+        const jsonThumbnails = {}
+        Object.keys(this.thumbnails).forEach(size => {
+            jsonThumbnails[size] = this.thumbnails[size].id
+        })
+        return {
+            id: this.id,
+            source: this.source.id,
+            thumbnails:jsonThumbnails,
+            metadata:this.metadata
+        }
+    }
+
 }
