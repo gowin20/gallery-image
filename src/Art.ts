@@ -1,8 +1,8 @@
 import { getFileName, saveFile } from "./Util.js";
 import type { ImageId } from "./LayoutImage.js"
 import { ImageResource }  from "./ImageResource.js";
-import type { GenerateImageOptions, GenerateThumbnailOptions, GenerateIiifOptions, ImageDimensions, GenerateBaseOptions } from "./ImageResource.js";
-import type { Canvas, Manifest } from '@iiif/presentation-3';
+import type { GenerateImageOptions, GenerateThumbnailOptions, ImageDimensions, GenerateBaseOptions } from "./ImageResource.js";
+import type { Canvas, ContentResource, Manifest, MetadataItem } from '@iiif/presentation-3';
 
 export type ArtistId = string;
 
@@ -256,6 +256,31 @@ export class Art {
         }
     }
 
+    async toIiifThumbnail(options: GenerateIiifOptions): Promise<ContentResource[]> {
+        if (options.exclude && options.exclude.includes('thumbnails')) return;
+
+        const thumbnail: ContentResource[] = [];
+        const thumbnails = Object.keys(this.thumbnails).sort((a,b) => Number(b)-Number(a))
+        for (const thumbnailSize of thumbnails) {
+            const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource();
+            thumbnail.push(thumbnailContentResource)
+        }
+
+        return thumbnail;
+    }
+    toIiifMetadata(options: GenerateIiifOptions): MetadataItem[] {
+        if (options.exclude && options.exclude.includes('metadata')) return;
+
+        const metadata: MetadataItem[] = [];
+        for (const metadataLabel of Object.keys(this.metadata)) {
+            metadata.push({
+                "label": {"en":[metadataLabel.charAt(0).toUpperCase()+metadataLabel.slice(1)]},
+                "value": {"en":[this.metadata[metadataLabel]]}
+            });
+        }
+        return metadata;
+    }
+
     async toIiifCanvas(id: string, options: GenerateIiifOptions): Promise<Canvas> {
 
         this.dimensions = await this.source.getDimensions();
@@ -276,33 +301,22 @@ export class Art {
                             id: `${canvasId}/annotation/0`,
                             type:"Annotation",
                             motivation:"Painting",
-                            body: await this.source.toIiifContentResource()
+                            body: await this.source.toIiifContentResource(),
+                            target: canvasId
                         }
                     ]
                 }
             ]
         }
         
-        if (this.thumbnails && !options.exclude.includes('thumbnails')) {
-            iiifCanvas.thumbnail = [];
-            for (const thumbnailSize of Object.keys(this.thumbnails)) {
-                const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource();
-                iiifCanvas.thumbnail.push(thumbnailContentResource)
-            }
+        if (this.thumbnails) {
+            iiifCanvas.thumbnail = await this.toIiifThumbnail(options);
         }
-
-        if (this.metadata && !options.exclude.includes('metadata')) {
-            iiifCanvas.metadata = [];
-            for (const metadataLabel of Object.keys(this.metadata)) {
-                iiifCanvas.metadata.push({
-                    "label": {"en":[metadataLabel.charAt(0).toUpperCase()+metadataLabel.slice(1)]},
-                    "value": {"en":[this.metadata[metadataLabel]]}
-                })
-            }
+        if (this.metadata) {
+            iiifCanvas.metadata = this.toIiifMetadata(options);
         }
-
         if (options.saveFile) {
-            saveFile(this.sourceName,JSON.stringify(iiifCanvas,null,2),options)
+            saveFile(`${this.sourceName}-canvas.json`,JSON.stringify(iiifCanvas,null,2),options)
         }
         return iiifCanvas;
     }
@@ -324,32 +338,21 @@ export class Art {
             },
             items: [
                 iiifCanvas
-            ]
+            ],
+            // viewingDirection: '',
+            // behavior: 'continuous' // TODO investigate more
         }
         // TODO presentation information, rights information, links, list of services within, structure of resource with Range, commentary annotations on the Manifest
-                
-        if (this.thumbnails && !options.exclude.includes('thumbnails')) {
-            iiifManifest.thumbnail = [];
-            for (const thumbnailSize of Object.keys(this.thumbnails)) {
-                const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource();
-                iiifManifest.thumbnail.push(thumbnailContentResource)
-            }
+        
+        if (this.thumbnails) {
+            iiifManifest.thumbnail = await this.toIiifThumbnail(options);
         }
-
-        if (this.metadata && !options.exclude.includes('metadata')) {
-            iiifManifest.metadata = [];
-            for (const metadataLabel of Object.keys(this.metadata)) {
-                iiifManifest.metadata.push({
-                    "label": {"en":[metadataLabel.charAt(0).toUpperCase()+metadataLabel.slice(1)]},
-                    "value": {"en":[this.metadata[metadataLabel]]}
-                })
-            }
+        if (this.metadata) {
+            iiifManifest.metadata = this.toIiifMetadata(options);
         }
-
         if (options.saveFile) {
-            saveFile(this.sourceName,JSON.stringify(iiifManifest,null,2),options)
+            saveFile(`${this.sourceName}-manifest.json`,JSON.stringify(iiifManifest,null,2),options)
         }
-
         return iiifManifest;
     }
 

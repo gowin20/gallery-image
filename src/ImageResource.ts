@@ -281,7 +281,7 @@ export class ImageResource {
             format: this.getMimeType(),
             width: this.dimensions.width,
             height: this.dimensions.height,
-            language:'en'
+            // language:'en' -- Images don't really have a default language
         }
 
         return iiifContentResource;
