@@ -1,7 +1,7 @@
 import { getFileName, saveFile } from "./Util.js";
 import type { ImageId } from "./LayoutImage.js"
 import { ImageResource }  from "./ImageResource.js";
-import type { GenerateImageOptions, GenerateThumbnailOptions, GenerateIiifOptions, ImageDimensions } from "./ImageResource.js";
+import type { GenerateImageOptions, GenerateThumbnailOptions, GenerateIiifOptions, ImageDimensions, GenerateBaseOptions } from "./ImageResource.js";
 import type { Canvas, Manifest } from '@iiif/presentation-3';
 
 export type ArtistId = string;
@@ -116,6 +116,10 @@ export type ArtId = string;
 
 type ArtOptions = {
     objectType: 'ArtObject' | 'OldArtObject' | 'DbArtObject' | 'iiif'
+}
+
+type GenerateIiifOptions = GenerateBaseOptions & {
+   exclude: string[];
 }
 
 export class Art {
@@ -259,7 +263,7 @@ export class Art {
         const canvasId = id ? id : this.id;
 
         const iiifCanvas: Canvas = {
-            id: `${canvasId}/canvas`,
+            id: canvasId,
             type:"Canvas",
             height:this.dimensions.height,
             width:this.dimensions.width,
@@ -279,7 +283,7 @@ export class Art {
             ]
         }
         
-        if (this.thumbnails) {
+        if (this.thumbnails && !options.exclude.includes('thumbnails')) {
             iiifCanvas.thumbnail = [];
             for (const thumbnailSize of Object.keys(this.thumbnails)) {
                 const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource();
@@ -287,7 +291,7 @@ export class Art {
             }
         }
 
-        if (this.metadata) {
+        if (this.metadata && !options.exclude.includes('metadata')) {
             iiifCanvas.metadata = [];
             for (const metadataLabel of Object.keys(this.metadata)) {
                 iiifCanvas.metadata.push({
@@ -297,11 +301,56 @@ export class Art {
             }
         }
 
-
         if (options.saveFile) {
             saveFile(this.sourceName,JSON.stringify(iiifCanvas,null,2),options)
         }
         return iiifCanvas;
+    }
+
+    async toIiifManifest(manifestId: string, options: GenerateIiifOptions): Promise<Manifest> {
+        // Creates a manifest with just a single canvas inside
+
+        const iiifCanvas = await this.toIiifCanvas(`${manifestId}/canvas`, {
+            exclude: ['thumbnails', 'metadata'],
+            saveFile: false
+        })
+
+        const iiifManifest: Manifest = {
+            "@context": "http://iiif.io/api/presentation/3/context.json",
+            id: manifestId,
+            type: 'Manifest',
+            label: {
+                "en": [this.sourceName]
+            },
+            items: [
+                iiifCanvas
+            ]
+        }
+        // TODO presentation information, rights information, links, list of services within, structure of resource with Range, commentary annotations on the Manifest
+                
+        if (this.thumbnails && !options.exclude.includes('thumbnails')) {
+            iiifManifest.thumbnail = [];
+            for (const thumbnailSize of Object.keys(this.thumbnails)) {
+                const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource();
+                iiifManifest.thumbnail.push(thumbnailContentResource)
+            }
+        }
+
+        if (this.metadata && !options.exclude.includes('metadata')) {
+            iiifManifest.metadata = [];
+            for (const metadataLabel of Object.keys(this.metadata)) {
+                iiifManifest.metadata.push({
+                    "label": {"en":[metadataLabel.charAt(0).toUpperCase()+metadataLabel.slice(1)]},
+                    "value": {"en":[this.metadata[metadataLabel]]}
+                })
+            }
+        }
+
+        if (options.saveFile) {
+            saveFile(this.sourceName,JSON.stringify(iiifManifest,null,2),options)
+        }
+
+        return iiifManifest;
     }
 
     static async fromOldArtObject(options) {

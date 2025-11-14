@@ -1,7 +1,6 @@
-import fs from 'fs';
 import type { GenerateImageOptions } from './ImageResource.js';
 import { LayoutImage } from './LayoutImage.js';
-import { cleanTrailingSlash, saveFile } from './Util.js';
+import { saveFile } from './Util.js';
 import type { ArtId, ArtObject } from './Art.js';
 
 export type LayoutId = string;

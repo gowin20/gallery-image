@@ -23,10 +23,6 @@ export type GenerateBaseOptions = {
     logLevel?: 'none' | 'standard' | 'verbose';
 }
 
-export type GenerateIiifOptions = GenerateBaseOptions & {
-
-}
-
 export type GenerateThumbnailOptions = GenerateBaseOptions & {}
 
 /**
