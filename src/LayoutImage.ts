@@ -67,8 +67,8 @@ export class LayoutImage extends Art {
     }
 
     async createLayoutImage (sharpOptions: any): Promise<this> {
-
-        // TODO determine width and height of one input image. Assume all are same size
+        
+        // Axiom: All input images are the same resolution
         const thumbnailSize = this.layout.thumbnailSize;
 
         const sampleArt = new Art(this.layout.array[0][0]);

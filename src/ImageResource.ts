@@ -1,15 +1,14 @@
-import { getResourceBuffer, cleanTrailingSlash, setupLogging, log, validatePath } from "./Util.js";
+import { getResourceBuffer, cleanTrailingSlash, setupLogging, log, validatePath, saveFile } from "./Util.js";
 import { Art } from "./gallery-image.js";
 import sharp from "sharp";
-import { writeFileSync, createWriteStream, existsSync, rmSync, mkdirSync } from "fs";
-import { Console } from "console";
+import { existsSync, rmSync, mkdirSync } from "fs";
 import {imageSize} from "image-size";
 import type { ContentResource } from "@iiif/presentation-3";
 
 /**
  * Base options for generating all kinds of images
  */
-export type GenerateImageBaseOptions = {
+export type GenerateBaseOptions = {
     /**
      * Whether to save the output image as a file
      */
@@ -22,14 +21,19 @@ export type GenerateImageBaseOptions = {
      * 
      */
     logLevel?: 'none' | 'standard' | 'verbose';
-    /**
-     * 
-     */
-    sharpOptions?: any;
 }
 
-export type GenerateImageOptions = GenerateImageBaseOptions & {
-        /**
+export type GenerateIiifOptions = GenerateBaseOptions & {
+
+}
+
+export type GenerateThumbnailOptions = GenerateBaseOptions & {}
+
+/**
+ * Standard output options types available to images
+ */
+export type GenerateImageOptions = GenerateBaseOptions & {
+    /**
      * Output format of image
      */
     outputType?: 'tif' | 'tiff' | 'dzi' | 'iiif';
@@ -37,6 +41,10 @@ export type GenerateImageOptions = GenerateImageBaseOptions & {
      * Required when outputType is 'iiif'. The address that will serve the resulting image service's info.json
      */
     id?: string;
+    /**
+     * Options passed directly to Sharp
+     */
+    sharpOptions?: any;
 }
 
     // TODO support "orig" as thumbnailSize param, returns original image as buffer
@@ -92,7 +100,7 @@ export class ImageResource {
      * @param options 
      * @returns Buffer
      */
-    async generateThumbnail(thumbnailSize: number, options?: GenerateImageBaseOptions): Promise<ImageResource> {
+    async generateThumbnail(thumbnailSize: number, options?: GenerateThumbnailOptions): Promise<ImageResource> {
         if (!thumbnailSize) throw new Error('Thumbnail size is required.');
 
         const logLevel = options.logLevel ? options.logLevel : {};
@@ -115,11 +123,7 @@ export class ImageResource {
         const imageName = `${this.partOf.sourceName}-${thumbnailSize}px.jpeg`;
 
         if (options.saveFile) {
-            const path = `${cleanTrailingSlash(options.outputDir)}/${imageName}`;
-            thumbnailId = path;
-
-            writeFileSync(path, thumbnailBuffer);
-            if (logLevel !== 'none') console.log(`Saved thumbnail ${thisThumbnail} to ${options.outputDir}.`);
+            thumbnailId = saveFile(imageName, thumbnailBuffer, options);
         }
         else {
             thumbnailId = imageName;
@@ -190,14 +194,12 @@ export class ImageResource {
     
         let tiffId: string;
 
+        const imageName = `${this.partOf.sourceName}.tiff`;
         if (options?.saveFile) {
-            const path = `${cleanTrailingSlash(options.outputDir)}/${this.partOf.sourceName}.tiff`;
-            tiffId = path;
-            writeFileSync(path, tiffBuffer);
-            log('Wrote pyramid TIFF to temp directory.');
+            tiffId = saveFile(imageName,tiffBuffer,options);
         }
         else {
-            tiffId = `${this.partOf.sourceName}.tiff`;
+            tiffId = imageName;
         }
 
         return new ImageResource({

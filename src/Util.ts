@@ -1,8 +1,9 @@
 import fetch from "node-fetch";
-import { parse, isAbsolute, dirname, resolve } from "path";
-import { createWriteStream, readFileSync } from "fs";
+import { parse, isAbsolute, resolve } from "path";
+import { createWriteStream, readFileSync, writeFileSync } from "fs";
 import { Console } from "console";
-import { fileURLToPath } from "url";
+import { GenerateBaseOptions } from "./ImageResource.js";
+
 
 const urlRegex = /^(http|https):\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:\d+)?(\/\S*)?$/;
 const httpRegex = /^(http|https):\/\/*/;
@@ -74,13 +75,25 @@ export const getFileName = (filePathOrUrl: string | URL): string => {
     return fileName;
 }
 
-export const cleanTrailingSlash = (path) => {
+export const saveFile = (name: string, file: any, options: GenerateBaseOptions): string => {
+    if (!options.outputDir) throw new Error('Output directory not specified.');
+
+    const path = `${cleanTrailingSlash(options.outputDir)}/${name}`
+    writeFileSync(path, file);
+
+    log(`Saved file to ${path}.`, options);
+    // returns the path
+    return path;
+}
+
+export const cleanTrailingSlash = (path: string) => {
     return path.replace(/([^/])\/+$/, '$1');
 }
 
+type LogLevel = 'none' | 'standard' | 'verbose';
+let logLevel: LogLevel;
 
-let logLevel: string;
-export const setupLogging = (level: string, jobName: string) => {
+export const setupLogging = (level: LogLevel, jobName: string) => {
     logLevel = level;
     if (logLevel === 'verbose') {
         const logOutput = createWriteStream(`${jobName}-${Date.now()}.log`, {flags: 'a'});
@@ -90,8 +103,8 @@ export const setupLogging = (level: string, jobName: string) => {
     }
 }
 
-export const log = (message:string) => {
-    if (logLevel !== 'none') console.log(message);
+export const log = (message:string, options?: {logLevel?:LogLevel}) => {
+    if ((options.logLevel && options.logLevel !== 'none') || (logLevel && logLevel !== 'none')) console.log(message);
 }
 export const error = (error:Error) => {
     if (logLevel !== 'none') console.error(error);

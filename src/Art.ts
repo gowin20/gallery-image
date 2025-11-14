@@ -1,6 +1,7 @@
-import { getFileName } from "./Util.js";
+import { getFileName, saveFile } from "./Util.js";
 import type { ImageId } from "./LayoutImage.js"
-import { ImageResource, GenerateImageOptions, ImageDimensions } from "./ImageResource.js";
+import { ImageResource }  from "./ImageResource.js";
+import type { GenerateImageOptions, GenerateThumbnailOptions, GenerateIiifOptions, ImageDimensions } from "./ImageResource.js";
 import type { Canvas, Manifest } from '@iiif/presentation-3';
 
 export type ArtistId = string;
@@ -113,6 +114,10 @@ export type ArtMetadata = {
 
 export type ArtId = string;
 
+type ArtOptions = {
+    objectType: 'ArtObject' | 'OldArtObject' | 'DbArtObject' | 'iiif'
+}
+
 export class Art {
 
     id?: ArtId;
@@ -139,9 +144,7 @@ export class Art {
                     art: this
                 });
             })
-        }
-
-        if (options.id) this.id = options.id;
+        }    
 
         if ((options as OldArtObject).orig) {
             this.fromOldArtObject(options as OldArtObject);
@@ -150,6 +153,7 @@ export class Art {
             const artObject = options as ArtObject;
             this.setArtSource(artObject);
             this.metadata = artObject.metadata ? artObject.metadata : {};
+            if (options.id) this.id = options.id;
         }
     }
 
@@ -218,7 +222,7 @@ export class Art {
         return await thumbnail.loadResource();
     }
 
-    async createThumbnail(thumbnailSize: number, options?: GenerateImageOptions): Promise<ImageResource> {
+    async createThumbnail(thumbnailSize: number, options?: GenerateThumbnailOptions): Promise<ImageResource> {
         if (!thumbnailSize) throw new Error('Thumbnail size is required.');
         if (this.thumbnailExists(thumbnailSize)) throw new Error(`Thumbnail of size ${thumbnailSize} already exists for ${this.sourceName}.`)
         if (!this.source) throw new Error('Must have a full-resolution original image to build thumbnails.');
@@ -248,7 +252,7 @@ export class Art {
         }
     }
 
-    async toIiifCanvas(id: string): Promise<Canvas> {
+    async toIiifCanvas(id: string, options: GenerateIiifOptions): Promise<Canvas> {
 
         this.dimensions = await this.source.getDimensions();
 
@@ -293,6 +297,20 @@ export class Art {
             }
         }
 
+
+        if (options.saveFile) {
+            saveFile(this.sourceName,JSON.stringify(iiifCanvas,null,2),options)
+        }
         return iiifCanvas;
+    }
+
+    static async fromOldArtObject(options) {
+        // TODO
+    }
+    static async fromArtObject(options) {
+
+    }
+    static async fromIiif(options) {
+        // accepts Canvas, Manifest, Content resource
     }
 }

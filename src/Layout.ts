@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { GenerateImageOptions } from './ImageResource.js';
+import type { GenerateImageOptions } from './ImageResource.js';
 import { LayoutImage } from './LayoutImage.js';
-import { cleanTrailingSlash } from './Util.js';
+import { cleanTrailingSlash, saveFile } from './Util.js';
 import type { ArtId, ArtObject } from './Art.js';
 
 export type LayoutId = string;
@@ -239,7 +239,7 @@ export class Layout {
 
         // Save layout JSON to disk
         if (options.saveFile) {
-            fs.writeFileSync(`${cleanTrailingSlash(options.outputDir)}/${this.name}-manifest.json`, JSON.stringify(this.toJson()));
+            saveFile(`${this.name}-layout.json`, JSON.stringify(this.toJson(), null, 2), options);
             console.log(`Saved ${this.name} as a layout.`);
         }
     }
