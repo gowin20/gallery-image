@@ -160,8 +160,9 @@ export class Art {
             const artObject = options as ArtObject;
             this.setArtSource(artObject);
             if (artObject.dimensions) {
-                this.dimensions = artObject.dimensions;
-                this.source.dimensions = artObject.dimensions;
+                const castDimensions= (dimensions:ImageDimensions) =>{return {width:Number(dimensions.width), height:Number(dimensions.height), orientation:Number(dimensions.orientation)}};
+                this.dimensions = castDimensions(artObject.dimensions);
+                this.source.dimensions = castDimensions(artObject.dimensions);
             };
             this.metadata = artObject.metadata ? artObject.metadata : {};
             if (options.id) this.id = options.id;
@@ -392,7 +393,7 @@ export class Art {
         };
 
         if (canvas.width && canvas.height) {
-            artOptions.dimensions = {width:canvas.width, height:canvas.height};
+            artOptions.dimensions = {width:Number(canvas.width), height:Number(canvas.height)};
         }
 
         return new Art(artOptions)
