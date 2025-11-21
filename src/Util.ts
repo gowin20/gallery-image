@@ -104,7 +104,7 @@ export const setupLogging = (level: LogLevel, jobName: string) => {
 }
 
 export const log = (message:string, options?: {logLevel?:LogLevel}) => {
-    if ((options.logLevel && options.logLevel !== 'none') || (logLevel && logLevel !== 'none')) console.log(message);
+    if ((options?.logLevel && options?.logLevel !== 'none') || (logLevel && logLevel !== 'none')) console.log(message);
 }
 export const error = (error:Error) => {
     if (logLevel !== 'none') console.error(error);
