@@ -373,7 +373,7 @@ export class Art {
 
     }
     // TODO add types and support all iiif
-    static async fromIiifCanvas(canvas: Canvas) {
+    static fromIiifCanvas(canvas: Canvas): Art {
         
         const fromIiifThumbnail = (thumbnail): Thumbnails => {
             const thumbnails = {};
