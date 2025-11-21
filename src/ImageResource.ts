@@ -47,7 +47,7 @@ export type GenerateImageOptions = GenerateBaseOptions & {
 export type ImageDimensions = {
     width:number,
     height:number,
-    orientation:number
+    orientation?:number
 };
 
 export class ImageResource {
@@ -70,12 +70,15 @@ export class ImageResource {
         id: URL | string;
         art: Art;
         buffer?: Buffer;
+        dimensions?: ImageDimensions;
     }) {
 
         if (!options.id || !options.art) throw new Error('Image resource is missing a required property.');
 
         this.partOf = options.art;
         this.id = options.id;
+
+        if (options.dimensions) this.dimensions = options.dimensions;
 
         if (options.buffer) this.buffer = options.buffer;
     }
@@ -287,8 +290,13 @@ export class ImageResource {
         return iiifContentResource;
     }
 
-    async createIiifImageService(): Promise<void> {
+    // static fromIiifContentResource(resource: ContentResource, parent: Art): ImageResource {
 
-
-    }
+    //     const imageResource = new ImageResource({
+    //         id:resource.id,
+    //         art:parent,
+    //         dimensions: {width:resource.width,height:resource.height}
+    //     });
+    //     return imageResource;
+    // }
 }

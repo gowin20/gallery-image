@@ -6,6 +6,8 @@ import type { Canvas, ContentResource, Manifest, MetadataItem } from '@iiif/pres
 
 export type ArtistId = string;
 
+type Thumbnails = {[_:`${number}`]: URL | string};
+
 export interface OldArtObject {
     /**
      * Database ID
@@ -22,9 +24,7 @@ export interface OldArtObject {
     /**
      * URLs to cached thumbnail versions of the art, in different sizes
      */
-    thumbnails: {
-        [_:`${number}`]: URL | string;
-    };
+    thumbnails: Thumbnails;
     /**
      * Creator of the art
      */
@@ -59,9 +59,7 @@ export interface DbArtObject {
     /**
      * Thumbnail versions of the image in various resolutions.
      */
-    thumbnails: {
-        [_:`${number}`]: URL | string;
-    };
+    thumbnails: Thumbnails;
     /**
      * Image properties and metadata
      */
@@ -76,18 +74,23 @@ export interface ArtObject {
     /**
      * Original image: full resolution, preferably .tiff
      */
-    source: URL | string | Buffer;
+    source: URL | string | Buffer | ImageResource;
     /**
      * Thumbnail versions of the image in various resolutions.
      */
-    thumbnails: {
-        [_:`${number}`]: URL | string;
-    };
+    thumbnails: Thumbnails;
     /**
      * Image properties and metadata
      */
-    metadata: ArtMetadata;
+    metadata: Metadata;
+
+    dimensions?: ImageDimensions;
 }
+
+export type Metadata = {
+    label: { [_:string]: string[] },
+    value: { [_:string]: string[] }
+}[] | { [_:string]:string } | any
 
 export type ArtMetadata = {
     /**
@@ -134,7 +137,7 @@ export class Art {
         [_:`${number}`]: ImageResource;
     }
 
-    metadata: ArtMetadata;
+    metadata: Metadata;
 
     constructor(options: ArtObject | OldArtObject) {
 
@@ -156,6 +159,10 @@ export class Art {
         else {
             const artObject = options as ArtObject;
             this.setArtSource(artObject);
+            if (artObject.dimensions) {
+                this.dimensions = artObject.dimensions;
+                this.source.dimensions = artObject.dimensions;
+            };
             this.metadata = artObject.metadata ? artObject.metadata : {};
             if (options.id) this.id = options.id;
         }
@@ -186,6 +193,9 @@ export class Art {
                 art: this,
                 buffer: artObject.source
             })
+        }
+        else if (artObject.source instanceof ImageResource) {
+            this.source = artObject.source;
         }
     }
 
@@ -362,7 +372,32 @@ export class Art {
     static async fromArtObject(options) {
 
     }
-    static async fromIiif(options) {
-        // accepts Canvas, Manifest, Content resource
+    // TODO add types and support all iiif
+    static async fromIiifCanvas(canvas: Canvas) {
+        
+        const fromIiifThumbnail = (thumbnail): Thumbnails => {
+            const thumbnails = {};
+            for (const thumbnailItem of thumbnail) {
+                thumbnails[thumbnailItem.width] = thumbnailItem.id
+            }
+            return thumbnails
+        }
+
+        const artOptions: ArtObject = {
+            id: canvas.id,
+            // @ts-ignore
+            source:canvas.items[0].items[0].body.id as string, 
+            thumbnails: fromIiifThumbnail(canvas.thumbnail),
+            metadata: canvas.metadata
+        };
+
+        if (canvas.width && canvas.height) {
+            artOptions.dimensions = {width:canvas.width, height:canvas.height};
+        }
+
+        return new Art(artOptions)
     }
+    
+    // accepts Canvas, Manifest, Content resource
 }
+
