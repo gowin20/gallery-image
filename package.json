@@ -1,6 +1,6 @@
 {
   "name": "gallery-image",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Stitches a single gallery image from a collection of images. Supports zoomable image formats for use with OpenSeadragon.",
   "keywords": [
     "dzi",
