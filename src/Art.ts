@@ -433,8 +433,7 @@ export class Art {
     static async fromIiif(iiif: any, type: 'Canvas' | 'Manifest'): Promise<Art> {
 
         const iiifJson = await getJsonResource(iiif) as Canvas | Manifest | any;
-        console.log('Parsed json:')
-        console.log(iiifJson)
+
         if (iiifJson.type !== 'Canvas' && iiifJson.type !== 'Manifest') throw new Error(`Art can only be created from a Canvas or Manifest, not a ${iiifJson.type}.`);
         
         if (type === 'Canvas') {

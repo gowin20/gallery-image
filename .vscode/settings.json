@@ -1,0 +1,10 @@
+{
+  "cSpell.customDictionaries": {
+      "iiif-words": {
+          "name":"iiif-words",
+          "description":"Words related to art and IIIF",
+          "path":"${workspaceFolder}/.vscode/dictionary-words.txt",
+          "addWords": true
+      }
+  }
+}

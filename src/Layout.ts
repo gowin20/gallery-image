@@ -1,6 +1,6 @@
 import type { GenerateImageOptions } from './ImageResource.js';
 import { LayoutImage } from './LayoutImage.js';
-import { saveFile } from './Util.js';
+import { log, saveFile, setupLogging } from './Util.js';
 import type { ArtId, ArtObject } from './Art.js';
 
 export type LayoutId = string;
@@ -226,10 +226,10 @@ export class Layout {
          */
         overwrite?: boolean;
     }): Promise<void> {
-
+        setupLogging(options?.logLevel ? options.logLevel : 'standard', this.id);
         if (this.image) throw new Error('Image already exists. Please pass `overwrite: true` to overwrite existing image.');
         if (!options || !options.outputType) throw new Error('Must specify an output file type.');
-        console.log('Generating layout image...');
+        log('Generating layout image...');
 
         this.image = new LayoutImage(this);
 
@@ -239,7 +239,7 @@ export class Layout {
         // Save layout JSON to disk
         if (options.saveFile) {
             saveFile(`${this.name}-layout.json`, JSON.stringify(this.toJson(), null, 2), options);
-            console.log(`Saved ${this.name} as a layout.`);
+            log(`Saved ${this.name} as a layout.`);
         }
     }
 

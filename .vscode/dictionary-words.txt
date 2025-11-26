@@ -1,0 +1,6 @@
+iiif
+manifest
+canvas
+annotation
+annotationpage
+Zoomable
