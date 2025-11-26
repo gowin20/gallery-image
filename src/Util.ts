@@ -14,7 +14,7 @@ export const minimumTileSize = (widthOrHeight:number): number => {
     return minimumTileSize;
 }
 
-export const validatePath = (filePathOrUrl: string | URL): string => {
+export const validatePath = (filePathOrUrl: string | URL): string | false => {
 
     if (filePathOrUrl instanceof URL) return filePathOrUrl.href;
     else if (urlRegex.test(filePathOrUrl) || httpRegex.test(filePathOrUrl)) return filePathOrUrl;
@@ -22,11 +22,16 @@ export const validatePath = (filePathOrUrl: string | URL): string => {
         // path points to a local file or directory
         if (isAbsolute(filePathOrUrl)) return filePathOrUrl;
         else {
-
-            return resolve(filePathOrUrl);
-            //return absolutePath.href;
+            // Not an absolute path or URL, return false
+            return false;
         }
     }
+}
+export const resolvePath = (filePathOrUrl: string | URL): string => {
+
+    const path = validatePath(filePathOrUrl);
+    if (path) return path;
+    else return resolve(filePathOrUrl as string);
 }
 
 export const getResourceBuffer = async (filePathOrUrl: string | URL): Promise<Buffer> => {
@@ -56,6 +61,35 @@ export const getResourceBuffer = async (filePathOrUrl: string | URL): Promise<Bu
     return imageBuffer;
 }
 
+export const getJsonResource = async(objectOrPath: string | URL | any): Promise<any> => {
+
+    if (typeof objectOrPath === 'object') {
+        try {
+            // Object literal
+            JSON.parse(JSON.stringify(objectOrPath))
+            return objectOrPath;
+        }
+        catch (e) {
+            throw e;
+        }
+    }
+    else {
+        const path = objectOrPath as string | URL;
+        if (path instanceof URL || urlRegex.test(path) || httpRegex.test(path)) {
+            // URL of file
+            const response = await fetch(path);
+            const json = await response.json();
+            return json;
+        }
+        else {
+            // Local file
+            const data = readFileSync(path, 'utf8');
+            const json = JSON.parse(data);
+            return json;
+        }
+    }
+}
+
 /**
  * Gets the file name without extension.
  * @param filePathOrUrl file path, URL string, or URL object
@@ -78,7 +112,11 @@ export const getFileName = (filePathOrUrl: string | URL): string => {
 export const saveFile = (name: string, file: any, options: GenerateBaseOptions): string => {
     if (!options.outputDir) throw new Error('Output directory not specified.');
 
-    const path = `${cleanTrailingSlash(options.outputDir)}/${name}`
+    let outputDirectory: string;
+    if (isAbsolute(options.outputDir)) outputDirectory = options.outputDir;
+    else outputDirectory = resolve(options.outputDir);
+    
+    const path = `${cleanTrailingSlash(outputDirectory)}/${name}`
     writeFileSync(path, file);
 
     log(`Saved file to ${path}.`, options);

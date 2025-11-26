@@ -1,4 +1,4 @@
-import { getFileName, saveFile } from "./Util.js";
+import { getFileName, getJsonResource, saveFile, setupLogging } from "./Util.js";
 import type { ImageId } from "./LayoutImage.js"
 import { ImageResource }  from "./ImageResource.js";
 import type { GenerateImageOptions, GenerateThumbnailOptions, ImageDimensions, GenerateBaseOptions } from "./ImageResource.js";
@@ -121,8 +121,32 @@ type ArtOptions = {
     objectType: 'ArtObject' | 'OldArtObject' | 'DbArtObject' | 'iiif'
 }
 
-type GenerateIiifOptions = GenerateBaseOptions & {
+export type GenerateIiifOptions = GenerateBaseOptions & {
    exclude: string[];
+}
+
+const fromIiifThumbnail = (thumbnail): Thumbnails => {
+    const thumbnails = {};
+    for (const thumbnailItem of thumbnail) {
+        thumbnails[thumbnailItem.width] = thumbnailItem.id
+    }
+    return thumbnails
+}
+
+function artOptionsFromIiif(iiif:Canvas, options?: {exclude: string[]}) {
+    const artOptions: ArtObject = {
+        id: iiif.id,
+        // @ts-ignore
+        source: iiif.items[0].items[0].body.id as string, 
+        thumbnails: iiif.thumbnail ? fromIiifThumbnail(iiif.thumbnail) : null,
+        metadata: iiif.metadata ? iiif.metadata : null
+    };
+
+    if (iiif.width && iiif.height) {
+        artOptions.dimensions = {width:Number(iiif.width), height:Number(iiif.height)};
+    }
+
+    return artOptions;
 }
 
 export class Art {
@@ -248,6 +272,13 @@ export class Art {
 
         return thumbnailResource;
     }
+    addThumbnail(thumbnailSize: number, path: string | URL): ImageResource {
+        this.thumbnails[thumbnailSize] = new ImageResource({
+            id: path,
+            art: this
+        });
+        return this.thumbnails[thumbnailSize];
+    }
 
     async generateImage(options: GenerateImageOptions): Promise<ImageResource> {
         return await this.source.generateImage(options);
@@ -268,19 +299,19 @@ export class Art {
     }
 
     async toIiifThumbnail(options: GenerateIiifOptions): Promise<ContentResource[]> {
-        if (options.exclude && options.exclude.includes('thumbnails')) return;
+        if (options?.exclude && options.exclude.includes('thumbnails')) return;
 
         const thumbnail: ContentResource[] = [];
         const thumbnails = Object.keys(this.thumbnails).sort((a,b) => Number(b)-Number(a))
         for (const thumbnailSize of thumbnails) {
-            const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource();
+            const thumbnailContentResource = await this.thumbnails[thumbnailSize].toIiifContentResource(options);
             thumbnail.push(thumbnailContentResource)
         }
 
         return thumbnail;
     }
     toIiifMetadata(options: GenerateIiifOptions): MetadataItem[] {
-        if (options.exclude && options.exclude.includes('metadata')) return;
+        if (options?.exclude && options.exclude.includes('metadata')) return;
 
         const metadata: MetadataItem[] = [];
         for (const metadataLabel of Object.keys(this.metadata)) {
@@ -292,11 +323,11 @@ export class Art {
         return metadata;
     }
 
-    async toIiifCanvas(id: string, options: GenerateIiifOptions): Promise<Canvas> {
+    async toIiifCanvas(canvasId: string, options: GenerateIiifOptions): Promise<Canvas> {
+        if (!canvasId) throw new Error('Must provide a canvas ID for IIIF output.');
+        setupLogging(options?.logLevel ? options.logLevel : 'standard', canvasId);
 
         this.dimensions = await this.source.getDimensions();
-
-        const canvasId = id ? id : this.id;
 
         const iiifCanvas: Canvas = {
             id: canvasId,
@@ -312,7 +343,7 @@ export class Art {
                             id: `${canvasId}/annotation/0`,
                             type:"Annotation",
                             motivation:"Painting",
-                            body: await this.source.toIiifContentResource(),
+                            body: await this.source.toIiifContentResource(options),
                             target: canvasId
                         }
                     ]
@@ -326,13 +357,18 @@ export class Art {
         if (this.metadata) {
             iiifCanvas.metadata = this.toIiifMetadata(options);
         }
-        if (options.saveFile) {
+        if (options?.saveFile) {
             saveFile(`${this.sourceName}-canvas.json`,JSON.stringify(iiifCanvas,null,2),options)
         }
         return iiifCanvas;
     }
 
     async toIiifManifest(manifestId: string, options: GenerateIiifOptions): Promise<Manifest> {
+        if (!manifestId) {
+            if (this.id) manifestId = this.id;
+            else throw new Error('Must provide a manifest ID for IIIF output.');
+        }
+        setupLogging(options?.logLevel ? options.logLevel : 'standard', manifestId);
         // Creates a manifest with just a single canvas inside
 
         const iiifCanvas = await this.toIiifCanvas(`${manifestId}/canvas`, {
@@ -361,7 +397,7 @@ export class Art {
         if (this.metadata) {
             iiifManifest.metadata = this.toIiifMetadata(options);
         }
-        if (options.saveFile) {
+        if (options?.saveFile) {
             saveFile(`${this.sourceName}-manifest.json`,JSON.stringify(iiifManifest,null,2),options)
         }
         return iiifManifest;
@@ -374,31 +410,40 @@ export class Art {
 
     }
     // TODO add types and support all iiif
-    static fromIiifCanvas(canvas: Canvas): Art {
+    static fromIiifCanvas(canvas: Canvas) {
         
-        const fromIiifThumbnail = (thumbnail): Thumbnails => {
-            const thumbnails = {};
-            for (const thumbnailItem of thumbnail) {
-                thumbnails[thumbnailItem.width] = thumbnailItem.id
-            }
-            return thumbnails
-        }
-
-        const artOptions: ArtObject = {
-            id: canvas.id,
-            // @ts-ignore
-            source:canvas.items[0].items[0].body.id as string, 
-            thumbnails: fromIiifThumbnail(canvas.thumbnail),
-            metadata: canvas.metadata
-        };
-
-        if (canvas.width && canvas.height) {
-            artOptions.dimensions = {width:Number(canvas.width), height:Number(canvas.height)};
-        }
-
+        const artOptions = artOptionsFromIiif(canvas);
         return new Art(artOptions)
     }
-    
-    // accepts Canvas, Manifest, Content resource
+    static fromIiifManifest(manifest: Manifest) {
+        const artOptions = artOptionsFromIiif(manifest.items[0]);
+        artOptions.id = manifest.id;
+
+        if (manifest.thumbnail) artOptions.thumbnails = fromIiifThumbnail(manifest.thumbnail);
+        if (manifest.metadata) artOptions.metadata = manifest.metadata;
+
+        // @ts-ignore
+        if (manifest.width && manifest.height) {
+            // @ts-ignore
+            artOptions.dimensions = {width:Number(manifest.width), height:Number(manifest.height)};
+        }
+        return new Art(artOptions);
+    }
+
+    static async fromIiif(iiif: any, type: 'Canvas' | 'Manifest'): Promise<Art> {
+
+        const iiifJson = await getJsonResource(iiif) as Canvas | Manifest | any;
+        console.log('Parsed json:')
+        console.log(iiifJson)
+        if (iiifJson.type !== 'Canvas' && iiifJson.type !== 'Manifest') throw new Error(`Art can only be created from a Canvas or Manifest, not a ${iiifJson.type}.`);
+        
+        if (type === 'Canvas') {
+            return Art.fromIiifCanvas(iiifJson);
+        }
+        else if (type === 'Manifest') {
+            return Art.fromIiifManifest(iiifJson);
+        }
+        else throw new Error('Invalid type passed.')
+    }
 }
 

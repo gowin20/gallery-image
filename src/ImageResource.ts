@@ -1,9 +1,10 @@
-import { getResourceBuffer, cleanTrailingSlash, setupLogging, log, validatePath, saveFile } from "./Util.js";
+import { getResourceBuffer, cleanTrailingSlash, setupLogging, log, validatePath, saveFile, resolvePath } from "./Util.js";
 import { Art } from "./gallery-image.js";
 import sharp from "sharp";
 import { existsSync, rmSync, mkdirSync } from "fs";
 import {imageSize} from "image-size";
 import type { ContentResource } from "@iiif/presentation-3";
+import { GenerateIiifOptions } from "./Art.js";
 
 /**
  * Base options for generating all kinds of images
@@ -76,7 +77,7 @@ export class ImageResource {
         if (!options.id || !options.art) throw new Error('Image resource is missing a required property.');
 
         this.partOf = options.art;
-        this.id = options.id;
+        this.id = resolvePath(options.id);
 
         if (options.dimensions) this.dimensions = options.dimensions;
 
@@ -102,8 +103,6 @@ export class ImageResource {
     async generateThumbnail(thumbnailSize: number, options?: GenerateThumbnailOptions): Promise<ImageResource> {
         if (!thumbnailSize) throw new Error('Thumbnail size is required.');
 
-        const logLevel = options.logLevel ? options.logLevel : {};
-
         const thisThumbnail = thumbnailSize;
 
         let origBuffer = await this.loadResource();
@@ -115,17 +114,17 @@ export class ImageResource {
                                         .jpeg()
                                         .toBuffer();       
 
-        if (logLevel !== 'none') console.log(`Created thumbnail for ${this.partOf.sourceName}.`);
+        log(`Created thumbnail for ${this.partOf.sourceName}.`);
 
         // save image
         let thumbnailId: string;
-        const imageName = `${this.partOf.sourceName}-${thumbnailSize}px.jpeg`;
 
+        const imageName = `${this.partOf.sourceName}-${thumbnailSize}px.jpeg`;
         if (options.saveFile) {
             thumbnailId = saveFile(imageName, thumbnailBuffer, options);
         }
         else {
-            thumbnailId = imageName;
+            thumbnailId = `${imageName}-buffer`;
         }
 
         const thumbnailResource = new ImageResource({
@@ -198,7 +197,7 @@ export class ImageResource {
             tiffId = saveFile(imageName,tiffBuffer,options);
         }
         else {
-            tiffId = imageName;
+            tiffId = `${imageName}-buffer`;
         }
 
         return new ImageResource({
@@ -274,12 +273,30 @@ export class ImageResource {
         return `image/${ext}`;
     }
 
-    async toIiifContentResource(): Promise<ContentResource> {
+    // TODO save any buffers in memory to disk, or upload to s3!
+    // test ID and if it's not a valid ID then save buffer to disk
+    async toIiifContentResource(options: GenerateIiifOptions): Promise<ContentResource> {
+
+        setupLogging(options?.logLevel ? options.logLevel : 'standard', this.getId());
 
         if (!this.dimensions) await this.getDimensions();
 
+        let resourceId = validatePath(this.id);
+        if (resourceId) resourceId = resourceId as string;
+        else {
+            // ID is not valid, save buffer to disk
+            if (this.getId().endsWith('-buffer') && this.buffer) {
+                if (!options?.saveFile || !options?.outputDir) throw new Error(`Resource ${this.getId()} is only stored in memory. Please provide an output directory to save the buffer to disk.`);
+
+                const outputId = this.getId().substring(0,(this.getId().length - '-buffer'.length));
+                const newId = saveFile(outputId, this.buffer, options);
+                this.id = newId, resourceId = newId;
+            }
+            else throw new Error(`Resource ${this.getId()} has an invalid ID and is not saved in memory.`);
+        }
+        
         const iiifContentResource: ContentResource = {
-            id: validatePath(this.getId()),
+            id: resourceId,
             type:"Image",
             format: this.getMimeType(),
             width: this.dimensions.width,
