@@ -244,11 +244,9 @@ export class Art {
         return Object.keys(this.thumbnails).includes(String(thumbnailSize));
     }
 
-    async loadOrCreateThumbnail(thumbnailSize: number): Promise<Buffer> {
+    async loadOrCreateThumbnail(thumbnailSize: number, options: GenerateThumbnailOptions): Promise<Buffer> {
         if (!this.thumbnailExists(thumbnailSize)) {
-            await this.createThumbnail(thumbnailSize, {
-                saveFile: false
-            });
+            await this.createThumbnail(thumbnailSize, options);
         }
         return await this.loadThumbnail(thumbnailSize);
     }

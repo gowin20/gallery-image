@@ -128,7 +128,7 @@ export const cleanTrailingSlash = (path: string) => {
     return path.replace(/([^/])\/+$/, '$1');
 }
 
-type LogLevel = 'none' | 'standard' | 'verbose';
+export type LogLevel = 'none' | 'standard' | 'verbose';
 let logLevel: LogLevel;
 
 export const setupLogging = (level: LogLevel, jobName: string) => {

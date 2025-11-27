@@ -178,7 +178,7 @@ export class ImageResource {
         const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
 
         const imageBuffer = await this.loadResource();
-
+        if (!this.dimensions) await this.getDimensions();
 
         const minimumTileWidth = this.dimensions.width > 256 ? 256 : this.dimensions.width - (this.dimensions.width % 16);
         const minimumTileHeight = this.dimensions.height > 256 ? 256 : this.dimensions.height - (this.dimensions.height % 16);

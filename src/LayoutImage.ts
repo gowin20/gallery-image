@@ -66,14 +66,14 @@ export class LayoutImage extends Art {
         }
     }
 
-    async createLayoutImage (sharpOptions: any): Promise<this> {
+    async createLayoutImage (options: GenerateImageOptions): Promise<this> {
         
         // Axiom: All input images are the same resolution
         const thumbnailSize = this.layout.thumbnailSize;
 
-        const sampleArt = new Art(this.layout.array[0][0]);
+        const sampleArt = this.layout.array[0][0];
 
-        const sampleBuffer = await sampleArt.loadOrCreateThumbnail(thumbnailSize);
+        const sampleBuffer = await sampleArt.loadOrCreateThumbnail(thumbnailSize,{saveFile:false});
         const dimensions = imageSize(sampleBuffer);
         this.dimensions = {
             width: dimensions.width,
@@ -93,12 +93,10 @@ export class LayoutImage extends Art {
         let y=0;
         for (const row of this.layout.array) {
             let x = 0;
-            for (const artObject of row) {
+            for (const art of row) {
                 // Every 10 times this runs is approx. 45s
                 try {
-                    const art = new Art(artObject);
-
-                    const artBuffer = await art.loadOrCreateThumbnail(thumbnailSize);
+                    const artBuffer = await art.loadOrCreateThumbnail(thumbnailSize,options);
 
                     const artBlock: ArtBlock = {
                         input: artBuffer,
@@ -129,16 +127,19 @@ export class LayoutImage extends Art {
         });
         log(`Loaded ${totalDone} images. Stitching...`);
 
-        // Generate large blank image in temp folder
-        const buffer = await sharp({
+        const params = {
             create: {
                 width:imageWidth * this.layout.numCols,
                 height:imageHeight * this.layout.numRows,
                 channels: 4,
                 background: { r: 48, g: 48, b: 48, alpha: 1 } // #303030 - same as site background
-            },
-            ...sharpOptions
-        }).composite(blocks).tiff({
+            }
+        }
+        if (options.sharpOptions) Object.assign(params, options.sharpOptions)
+
+        // Generate large blank image in temp folder
+        // @ts-ignore
+        const buffer = await sharp(params).composite(blocks).tiff({
             quality:100
         }).toBuffer();
         log('Layout fully assembled and saved as buffer.');
@@ -160,7 +161,7 @@ export class LayoutImage extends Art {
         if (!this.source) {
             log('Layout image needs to be assembled. Starting assembly process...');
             const sharpOptions = options.sharpOptions ? options.sharpOptions : {};
-            await this.createLayoutImage(sharpOptions);
+            await this.createLayoutImage(options);
         }
 
         const finalImage = await this.source.generateImage(options);

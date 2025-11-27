@@ -25,12 +25,14 @@
     "start": "npm run dev"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.940.0",
     "@iiif/presentation-3": "^2.2.3",
     "@types/node": "^24.5.2",
     "esbuild": "^0.25.11",
     "node-addon-api": "^8.5.0",
     "node-gyp": "^11.5.0",
     "nodemon": "^3.1.11",
+    "tslib": "^2.8.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
