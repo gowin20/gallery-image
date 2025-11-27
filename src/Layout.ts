@@ -1,6 +1,6 @@
 import type { GenerateImageOptions } from './ImageResource.js';
 import { LayoutImage } from './LayoutImage.js';
-import { log, saveFile, setupLogging, LogLevel } from './Util.js';
+import { log, saveFile, setupLogging, LogLevel, getJsonResource } from './Util.js';
 import type { ArtObject, GenerateIiifOptions } from './Art.js';
 import { Art } from './Art.js';
 import { Canvas, Collection, Manifest } from '@iiif/presentation-3';
@@ -40,18 +40,24 @@ export interface LayoutObject {
 
 
 type LayoutOptions = {
+    /**
+     * Required, name of layout
+     */
     name: string;
-    // Options for a preset arrangement of notes
-    array?: ArtObject[][];
-    // Options for a specific set of notes in random order
-    artList?: ArtObject[];
-    ratio: number;
-    numRows: number;
-    numCols: number;
     /**
      * Required, size of each image in the layout. TODO DETERMINE THIS DYNAMICALLY FROM ART PROPERTIES
      */
     thumbnailSize: number | 'auto';
+    // TODO map input options to this
+    //art: ArtObject[][] | ArtObject[];
+    // Options for a preset arrangement of notes
+    array?: ArtObject[][];
+    // Options for a specific set of notes in random order
+    artList?: ArtObject[];
+    ratio?: number;
+    numRows?: number;
+    numCols?: number;
+
 }
 
 /*
@@ -350,12 +356,59 @@ export class Layout {
         // determine type of iiif
         // only support manifest right now
 
+        const iiifObject = await getJsonResource(iiif);
 
+        const artList: ArtObject[] = [];
+        if (iiifObject.type === 'Collection') {
 
+            const collection = iiifObject as Collection;
+
+            for (const manifest of collection.items) {
+
+                for (const canvas of manifest.items) {
+                    const artObject = await Art.fromIiif(canvas, {output:'artObject'}) as ArtObject;
+                    artList.push(artObject);
+                }
+            }
+        }
+        else if (iiifObject.type === 'Manifest') {
+            const manifest = iiifObject as Manifest;
+
+            for (const canvas of manifest.items) {
+                const artObject = await Art.fromIiif(canvas, {output:'artObject'}) as ArtObject;
+                artList.push(artObject);
+            }
+        }
+        else throw new Error('Invalid IIIF object passed. Please provide a Collection or Manifest.');
         // read in art as Canvases -- output as art object, rather than Art
         // create array of art list
+
+        // determine dimensions
+        let thumbnailSize: number, i=0;
+        // Check cached dimensions
+        while (!thumbnailSize && i < artList.length) {
+            if (artList[i].dimensions) {
+                thumbnailSize = artList[i].dimensions.width;
+                break;
+            }
+            else {
+                i++;
+            }
+        }
+        // Manually check dimensions
+        if (!thumbnailSize) {
+            const testArt = new Art(artList[0]);
+            const dimensions = await testArt.source.getDimensions();
+            thumbnailSize = dimensions.width;
+        }
+    
         // then create new layout
-        return this;
+        const layout = new Layout({
+            name: iiifObject.label,
+            artList: artList,
+            thumbnailSize: thumbnailSize
+        })
+        return layout;
     }
 
 }

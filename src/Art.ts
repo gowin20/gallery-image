@@ -292,7 +292,8 @@ export class Art {
             id: this.id,
             source: this.source.id,
             thumbnails:jsonThumbnails,
-            metadata:this.metadata
+            metadata:this.metadata,
+            dimensions:this.dimensions
         }
     }
 
@@ -428,19 +429,21 @@ export class Art {
         return new Art(artOptions);
     }
 
-    static async fromIiif(iiif: any, type: 'Canvas' | 'Manifest'): Promise<Art> {
+    static async fromIiif(iiif: any, options?: {output:'Art'|'artObject'}): Promise<Art | ArtObject> {
 
         const iiifJson = await getJsonResource(iiif) as Canvas | Manifest | any;
 
-        if (iiifJson.type !== 'Canvas' && iiifJson.type !== 'Manifest') throw new Error(`Art can only be created from a Canvas or Manifest, not a ${iiifJson.type}.`);
-        
-        if (type === 'Canvas') {
-            return Art.fromIiifCanvas(iiifJson);
+        let art: Art;
+        if (iiifJson.type === 'Canvas') {
+            art = Art.fromIiifCanvas(iiifJson);
         }
-        else if (type === 'Manifest') {
-            return Art.fromIiifManifest(iiifJson);
+        else if (iiifJson.type === 'Manifest') {
+            art = Art.fromIiifManifest(iiifJson);
         }
-        else throw new Error('Invalid type passed.')
+        else  throw new Error(`Art can only be created from a Canvas or Manifest, not a ${iiifJson.type}.`);
+
+        if (options?.output && options.output === 'artObject') return art.toArtObject();
+        else return art;
     }
 }
 
