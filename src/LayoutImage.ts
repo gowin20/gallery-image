@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { setupLogging, log, error } from "./Util.js";
 import { imageSize } from 'image-size';
-import { GenerateImageOptions, ImageResource } from "./ImageResource.js";
+import { GenerateImageOptions, GenerateThumbnailOptions, ImageResource } from "./ImageResource.js";
 import { Art, ArtObject } from "./Art.js";
 import { Layout } from "./Layout.js";
 
@@ -35,6 +35,14 @@ export type StitchedImage = {
     Path: string;
 }
 
+export type GenerateLayoutImageOptions = GenerateImageOptions & {
+    saveThumbnails?: boolean;
+        /**
+     * Whether to overwrite the existing image on file
+     */
+    overwrite?: boolean;
+}
+
 export class LayoutImage extends Art {
     
     layout: Layout;
@@ -58,16 +66,17 @@ export class LayoutImage extends Art {
 
     setArtSource(artObject: ArtObject): void {
         if (!artObject.source) {
-            if (!artObject.metadata.title) throw new Error('No title or layout name was provided.')
-            this.sourceName = artObject.metadata.title;
+            this.sourceName = artObject.id;
         }
         else {
             super.setArtSource(artObject);
         }
     }
 
-    async createLayoutImage (options: GenerateImageOptions): Promise<this> {
+    async createLayoutImage (options: GenerateLayoutImageOptions): Promise<this> {
         
+        console.log('ALL OPTIONS:')
+        console.log(options);
         // Axiom: All input images are the same resolution
         const thumbnailSize = this.layout.thumbnailSize;
 
@@ -91,12 +100,17 @@ export class LayoutImage extends Art {
         const blocks: ArtBlock[] = [];
 
         let y=0;
+
+        const thumbnailOptions: GenerateThumbnailOptions = {
+            saveFile: options?.saveThumbnails ? options.saveThumbnails : false,
+            outputDir: options.outputDir
+        }
         for (const row of this.layout.array) {
             let x = 0;
             for (const art of row) {
                 // Every 10 times this runs is approx. 45s
                 try {
-                    const artBuffer = await art.loadOrCreateThumbnail(thumbnailSize,options);
+                    const artBuffer = await art.loadOrCreateThumbnail(thumbnailSize, thumbnailOptions);
 
                     const artBlock: ArtBlock = {
                         input: artBuffer,
@@ -153,10 +167,10 @@ export class LayoutImage extends Art {
         return this;
     }
 
-    async generateImage(options: GenerateImageOptions): Promise<ImageResource> {
+    async generateImage(options: GenerateLayoutImageOptions): Promise<ImageResource> {
         // Debug logging
         const logLevel = options.logLevel ? options.logLevel : 'standard';
-        setupLogging(logLevel,`${options.outputDir}/${this.layout.name}-generate`);
+        setupLogging(logLevel,`${options.outputDir}/${this.layout.id}-generate`);
 
         if (!this.source) {
             log('Layout image needs to be assembled. Starting assembly process...');

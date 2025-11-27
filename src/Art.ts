@@ -357,7 +357,7 @@ export class Art {
             iiifCanvas.metadata = this.toIiifMetadata(options);
         }
         if (options?.saveFile) {
-            saveFile(`${this.sourceName}-canvas.json`,JSON.stringify(iiifCanvas,null,2),options)
+            saveFile(`${this.sourceName}-canvas.json`,JSON.stringify(iiifCanvas,null,2),{outputDir:options.outputDir, logLevel:options.logLevel})
         }
         return iiifCanvas;
     }
@@ -397,7 +397,7 @@ export class Art {
             iiifManifest.metadata = this.toIiifMetadata(options);
         }
         if (options?.saveFile) {
-            saveFile(`${this.sourceName}-manifest.json`,JSON.stringify(iiifManifest,null,2),options)
+            saveFile(`${this.sourceName}-manifest.json`,JSON.stringify(iiifManifest,null,2),{outputDir:options.outputDir, logLevel:options.logLevel})
         }
         return iiifManifest;
     }

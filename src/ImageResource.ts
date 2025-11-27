@@ -121,7 +121,7 @@ export class ImageResource {
 
         const imageName = `${this.partOf.sourceName}-${thumbnailSize}px.jpeg`;
         if (options.saveFile) {
-            thumbnailId = saveFile(imageName, thumbnailBuffer, options);
+            thumbnailId = saveFile(imageName, thumbnailBuffer, {outputDir:options.outputDir, logLevel:options.logLevel});
         }
         else {
             thumbnailId = `${imageName}-buffer`;
@@ -188,13 +188,17 @@ export class ImageResource {
             tile:true, // Not sure this flag matters since pyramid is true
             tileWidth: minimumTileWidth,
             tileHeight: minimumTileHeight,
-        }).toBuffer();
+        })
+        .withMetadata({
+            orientation:6
+        })
+        .toBuffer();
     
         let tiffId: string;
 
         const imageName = `${this.partOf.sourceName}.tiff`;
         if (options?.saveFile) {
-            tiffId = saveFile(imageName,tiffBuffer,options);
+            tiffId = saveFile(imageName,tiffBuffer,{outputDir:options.outputDir, logLevel:options.logLevel});
         }
         else {
             tiffId = `${imageName}-buffer`;
@@ -289,7 +293,7 @@ export class ImageResource {
                 if (!options?.saveFile || !options?.outputDir) throw new Error(`Resource ${this.getId()} is only stored in memory. Please provide an output directory to save the buffer to disk.`);
 
                 const outputId = this.getId().substring(0,(this.getId().length - '-buffer'.length));
-                const newId = saveFile(outputId, this.buffer, options);
+                const newId = saveFile(outputId, this.buffer, {outputDir:options.outputDir, logLevel:options.logLevel});
                 this.id = newId, resourceId = newId;
             }
             else throw new Error(`Resource ${this.getId()} has an invalid ID and is not saved in memory.`);

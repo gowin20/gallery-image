@@ -1,5 +1,4 @@
-import type { GenerateImageOptions } from './ImageResource.js';
-import { LayoutImage } from './LayoutImage.js';
+import { GenerateLayoutImageOptions, LayoutImage } from './LayoutImage.js';
 import { log, saveFile, setupLogging, LogLevel, getJsonResource } from './Util.js';
 import type { ArtObject, GenerateIiifOptions } from './Art.js';
 import { Art } from './Art.js';
@@ -41,6 +40,10 @@ export interface LayoutObject {
 
 type LayoutOptions = {
     /**
+     * 
+     */
+    id: string;
+    /**
      * Required, name of layout
      */
     name: string;
@@ -50,8 +53,6 @@ type LayoutOptions = {
     thumbnailSize: number | 'auto';
     // TODO map input options to this
     //art: ArtObject[][] | ArtObject[];
-    // Options for a preset arrangement of notes
-    array?: ArtObject[][];
     // Options for a specific set of notes in random order
     artList?: ArtObject[];
     ratio?: number;
@@ -81,8 +82,11 @@ const unpackArtArray = (artObjectArray: ArtObject[][]): Art[][] => {
     const artArray: Art[][] = [];
     for (const [i,row] of artObjectArray.entries()) {
         artArray.push([])
-        for (const artObject of row) {
-            artArray[i].push(new Art(artObject));
+        for (const [j,artObject] of row.entries()) {
+            artArray[i].push(new Art({
+                    ...artObject,
+                    id: artObject.id ? artObject.id : `art-${j}`
+                }));
         }
     }
     return artArray;
@@ -119,50 +123,28 @@ export class Layout {
     thumbnailSize: number;
 
     constructor(options?: LayoutOptions | LayoutObject) {
-        // LayoutObject passed directly
-        if ((options as LayoutObject).id) {
-            const layoutObj = options as LayoutObject;
-
-            this.id = layoutObj.id;
-            this.name = layoutObj.name;
-            this.array = unpackArtArray(layoutObj.array);
-            //this.image = layoutObj.image;
-            this.numCols = layoutObj.numCols;
-            this.numRows = layoutObj.numRows;
-            this.thumbnailSize = layoutObj.thumbnailSize;
-        }
-        // LayoutOptions passed
-        else {
-            options = options as LayoutOptions;
-            this.createFromOptions(options);
-        }
-    }    
-
-    createFromOptions(options: LayoutOptions): void {
         
-        if (!this.name && !options.name) {
-            throw new Error('No layout name provided.');
-        }
-        else if (!this.name) this.name = options.name;
+        if (!options.name) throw new Error('No layout name provided.');
+        this.name = options.name;
+        this.id = options.id ? options.id : options.name;
 
         if (options.thumbnailSize) {
             this.thumbnailSize = options.thumbnailSize === 'auto' ? 288 : options.thumbnailSize;
         }
         else this.thumbnailSize = 288;
 
-        if (options.array) { 
-            // Use provided 2D array of art
-            this.array = unpackArtArray(options.array);
+        // LayoutObject passed directly
+        if ((options as LayoutObject).array) {
+            const layout = options as LayoutObject
+            this.array = unpackArtArray(layout.array);
 
-            if (options.numCols || options.numRows) throw new Error('Cannot set width or height of layout when a pattern is provided.');
-            if (options.ratio) throw new Error('Cannot set aspect ratio of layout when a pattern is provided.');
-
+            if (layout.numCols || options.numRows) throw new Error('Cannot set width or height of layout when a pattern is provided.');
+            
             this.numRows = this.array.length;
             this.numCols = this.array[0].length;
         }
-        else {
-            // Create random array based on list of art
-            if (!options.artList) throw new Error('No art IDs passed for random pattern generation.');
+        else if ((options as LayoutOptions).artList){
+            options = options as LayoutOptions;
 
             if ((options.numRows || options.numCols) && options.ratio) throw new Error('Cannot pass both numRows\/numCols and ratio.');
 
@@ -174,15 +156,13 @@ export class Layout {
             
             this.array = this._makeRandomPattern({
                 artList: options.artList,
-                ratio: options.ratio ? options.ratio : 9/16
+                ratio: options.ratio ? options.ratio : 9/16,
             });
             
             this.numRows = this.array.length;
             this.numCols = this.array[0].length;
         }
-
-        return;
-    }
+    }    
 
     async getMaxThumbnailSize(thumbnailSize:number | 'auto'): Promise<number> {
         // TODO
@@ -206,12 +186,7 @@ export class Layout {
         } as LayoutObject;
     }
 
-    async generateImage(options: GenerateImageOptions & {
-        /**
-         * Whether to overwrite the existing image on file
-         */
-        overwrite?: boolean;
-    }): Promise<void> {
+    async generateImage(options: GenerateLayoutImageOptions): Promise<void> {
         setupLogging(options?.logLevel ? options.logLevel : 'standard', this.id);
         if (this.image) throw new Error('Image already exists. Please pass `overwrite: true` to overwrite existing image.');
         if (!options || !options.outputType) throw new Error('Must specify an output file type.');
@@ -224,7 +199,7 @@ export class Layout {
 
         // Save layout JSON to disk
         if (options.saveFile) {
-            saveFile(`${this.name}-layout.json`, JSON.stringify(this.toJson(), null, 2), options);
+            saveFile(`${this.id}-layout.json`, JSON.stringify(this.toJson(), null, 2), {outputDir: options.outputDir, logLevel:options.logLevel});
             log(`Saved ${this.name} as a layout.`);
         }
     }
@@ -243,12 +218,11 @@ export class Layout {
      * @returns 
      */
     _makeRandomPattern(options: {artList: ArtObject[], ratio: number, logLevel?: LogLevel}): Art[][] {
-        
-        if (this.id) throw new Error('Layout was initialized with an ID. Cannot make random pattern.')
+    
         if (!options.artList) throw new Error('No art provided to \'makeRandomPattern()\'');
     
-        setupLogging(options?.logLevel ? options.logLevel : 'standard',this.id);
-        log('Creating random pattern...')
+        // setupLogging(options?.logLevel ? options.logLevel : 'standard',this.id);
+        // log('Creating random pattern...')
         
         const totalNotes = options.artList.length;
     
@@ -283,13 +257,16 @@ export class Layout {
                     i = Math.floor(Math.random()*totalNotes);
                 } while (usedNotes.has(i));
 
-                thisRow.push(new Art(options.artList[i]))
+                thisRow.push(new Art({
+                    ...options.artList[i],
+                    id: options.artList[i].id ? options.artList[i].id : `art-${i}`
+                }))
                 usedNotes.add(i);
             }
             pattern.push(thisRow);
         }
     
-        log(`Width:${pattern[0].length}\nHeight: ${pattern.length}`);
+        // log(`Width:${pattern[0].length}\nHeight: ${pattern.length}`);
         return pattern;
     }
     // creates an array filled with random notes based on a template
@@ -331,27 +308,31 @@ export class Layout {
                 "en": [this.name]
             },
         }
+        let iiifOutput: Manifest | Collection;
 
         if (type === 'Manifest') {
-            const iiifOutput: Manifest = {
+            iiifOutput = {
                 ...iiifBase,
                 type:"Manifest",
                 items: await createIiifArt('Canvas',{saveFile:false, exclude:[]}) as Canvas[]
-            };
-            return iiifOutput;
+            } as Manifest;
         }
         else if (type === 'Collection') {
-            const iiifOutput: Collection = {
+            iiifOutput = {
                 ...iiifBase,
                 type:"Collection",
                 items: await createIiifArt('Manifest',{saveFile:false, exclude:[]}) as Manifest[]
-            }
-            return iiifOutput;
+            } as Collection;
         }
         else throw new Error('Invalid IIIF type passed');
+
+        if (options.saveFile) {
+            saveFile(`${this.id}-item-${type}.json`, JSON.stringify(iiifOutput), {outputDir:options.outputDir,logLevel:options.logLevel})
+        }
+        return iiifOutput;
     }
 
-    static async randomFromIiif(iiif: any, options): Promise<Layout> {
+    static async randomFromIiif(iiif: any): Promise<Layout> {
 
         // determine type of iiif
         // only support manifest right now
@@ -404,6 +385,7 @@ export class Layout {
     
         // then create new layout
         const layout = new Layout({
+            id: iiifObject.id,
             name: iiifObject.label,
             artList: artList,
             thumbnailSize: thumbnailSize

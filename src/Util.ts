@@ -109,7 +109,7 @@ export const getFileName = (filePathOrUrl: string | URL): string => {
     return fileName;
 }
 
-export const saveFile = (name: string, file: any, options: GenerateBaseOptions): string => {
+export const saveFile = (name: string, file: any, options: {outputDir: string, logLevel?: LogLevel}): string => {
     if (!options.outputDir) throw new Error('Output directory not specified.');
 
     let outputDirectory: string;
